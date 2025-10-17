@@ -98,7 +98,17 @@
                             Break Reliefs Routes
                         </button>
                         <button id="show-site-search-btn" class="w-full text-center p-4 bg-white text-gray-900 rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-all duration-200 transform hover:scale-105 active:scale-100">
-                            Search Site 
+                            Search Site Officers
+                        </button>
+                        <button id="show-all-officers-btn" class="w-full text-center p-4 bg-white text-gray-900 rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-all duration-200 transform hover:scale-105 active:scale-100">
+                            See All Officers
+                        </button>
+                    </div>
+
+                    <!-- All Officers View -->
+                    <div id="all-officers-view" class="view-panel hidden">
+                         <button id="back-from-all-officers-btn" class="w-full text-center p-4 bg-gray-700 text-white rounded-lg shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-all duration-200">
+                            Back to Main View
                         </button>
                     </div>
 
@@ -878,6 +888,22 @@
                 });
             }
 
+            function displayAllOfficersAndSites() {
+                displayAllSites(); // Show all the work sites first
+                officerLayer.clearLayers(); // Clear any previous officer markers
+                const officerIcon = createColoredIcon('#111827', { scale: 0.7 }); // Small black pin
+
+                officers.forEach(officer => {
+                    if (officer.homeLat && officer.homeLng) {
+                        const homeMarker = L.marker([officer.homeLat, officer.homeLng], { icon: officerIcon })
+                            .addTo(officerLayer);
+                        homeMarker.bindPopup(`<b>${officer.firstName} ${officer.lastName}</b><br>${officer.homeAddress}`);
+                    }
+                });
+
+                map.setView([37.7749, -122.4194], 12); // zoom out a bit to see more
+            }
+
             function displayOnlyReliefSites() {
                 routeLayer.clearLayers();
                 allSitesLayer.clearLayers();
@@ -1166,7 +1192,8 @@
             const routeInfoSection = document.getElementById('route-info-section');
             const siteSearchView = document.getElementById('site-search-view');
             const officerListView = document.getElementById('officer-list-view');
-            const allViews = [initialView, reliefListView, routeInfoSection, siteSearchView, officerListView];
+            const allOfficersView = document.getElementById('all-officers-view');
+            const allViews = [initialView, reliefListView, routeInfoSection, siteSearchView, officerListView, allOfficersView];
 
             function switchView(targetView) {
                 allViews.forEach(view => {
@@ -1188,6 +1215,17 @@
                 allSitesLayer.clearLayers();
                 officerLayer.clearLayers();
                 routeLayer.clearLayers();
+                map.setView([37.7749, -122.4194], 13);
+            });
+            
+             document.getElementById('show-all-officers-btn').addEventListener('click', () => {
+                displayAllOfficersAndSites();
+                switchView(allOfficersView);
+            });
+
+            document.getElementById('back-from-all-officers-btn').addEventListener('click', () => {
+                switchView(initialView);
+                displayAllSites();
                 map.setView([37.7749, -122.4194], 13);
             });
 
@@ -1223,4 +1261,5 @@
     </script>
 </body>
 </html>
+
 
