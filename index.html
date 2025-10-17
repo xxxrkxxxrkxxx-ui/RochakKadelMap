@@ -816,6 +816,14 @@
             const reliefLegend = document.getElementById('relief-legend-container');
 
             const allSitesList = Object.values(sites).flat();
+            const siteLookup = new Map(allSitesList.map(site => [site.name, site]));
+
+            window.showOfficersForSite = (siteName) => {
+                const site = siteLookup.get(siteName);
+                if (site) {
+                    displaySiteOfficers(site);
+                }
+            };
 
             function findSiteByAddress(address) {
                 const normalizedSearch = address.toLowerCase().trim();
@@ -855,7 +863,17 @@
                     const icon = createColoredIcon(color);
                     locations.forEach(site => {
                         const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
-                        marker.bindPopup(`<b>${site.name}</b><br>${site.address}<br><small>Manager: ${manager}</small>`);
+                        const popupContent = `
+                            <b>${site.name}</b><br>
+                            ${site.address}<br>
+                            <small>Manager: ${manager}</small>
+                            <br><br>
+                            <button style="background-color: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;"
+                                    onclick="showOfficersForSite('${site.name.replace(/'/g, "\\'")}')">
+                                Show Officers
+                            </button>
+                        `;
+                        marker.bindPopup(popupContent);
                     });
                 });
             }
@@ -904,7 +922,17 @@
 
                     const icon = createColoredIcon(color, { scale: 0.9 });
                     const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
-                    marker.bindPopup(`<b>${site.name}</b><br>${site.address}<br><small>${popupText}</small>`);
+                     const popupContent = `
+                        <b>${site.name}</b><br>
+                        ${site.address}<br>
+                        <small>${popupText}</small>
+                        <br><br>
+                        <button style="background-color: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;"
+                                onclick="showOfficersForSite('${site.name.replace(/'/g, "\\'")}')">
+                            Show Officers
+                        </button>
+                    `;
+                    marker.bindPopup(popupContent);
                     reliefBounds.push([site.lat, site.lng]);
                 });
 
@@ -1195,3 +1223,4 @@
     </script>
 </body>
 </html>
+
