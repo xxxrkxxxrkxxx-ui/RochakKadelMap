@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Rochak Map</title>
+    <title>Rochak Map</title>
     
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -98,7 +98,7 @@
                             Break Reliefs Routes
                         </button>
                         <button id="show-site-search-btn" class="w-full text-center p-4 bg-white text-gray-900 rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-all duration-200 transform hover:scale-105 active:scale-100">
-                            Search Site 
+                            Search Sites
                         </button>
                         <button id="show-all-officers-btn" class="w-full text-center p-4 bg-white text-gray-900 rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-all duration-200 transform hover:scale-105 active:scale-100">
                             See All Officers
@@ -107,9 +107,12 @@
 
                     <!-- All Officers View -->
                     <div id="all-officers-view" class="view-panel hidden">
-                         <button id="back-from-all-officers-btn" class="w-full text-center p-4 bg-gray-700 text-white rounded-lg shadow-md hover:bg-gray-600 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-all duration-200">
-                            Back to Main View
-                        </button>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl text-white">All Officers</h2>
+                            <button id="back-from-all-officers-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        </div>
+                        <input type="text" id="officer-search-input" placeholder="Filter officers by name..." class="w-full p-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <div id="officer-suggestions" class="mt-4 space-y-2 max-h-96 overflow-y-auto custom-scrollbar"></div>
                     </div>
 
                       <!-- View for Site Search -->
@@ -616,7 +619,7 @@
   { "firstName": "Jumaane", "lastName": "Garrett", "homeAddress": "5618 Boulder Canyon Dr, CA, 94552-5473", "jobAddress": "1955 Broadway", "homeLat": 37.6434, "homeLng": -122.0392 },
   { "firstName": "Ruth", "lastName": "Dock", "homeAddress": "2550 Hilborn Rd Apt 290, CA, 94534-8609", "jobAddress": "1400 Geary Blvd", "homeLat": 38.281, "homeLng": -122.0463 },
   { "firstName": "Annastia", "lastName": "Singleton", "homeAddress": "411 29th St Unit 321, CA, 94609-3660", "jobAddress": "220 Montgomery St", "homeLat": 37.8188, "homeLng": -122.2646 },
-  { "firstName": "Rochak", "lastName": "Kadel", "homeAddress": "6767 Hotdog Road", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 18.656654, "homeLng": -11.601563 },
+ { "firstName": "Rochak", "lastName": "Kadel", "homeAddress": "6767 Hotdog Road", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 18.656654, "homeLng": -11.601563 },
     { "firstName": "Inder", "lastName": "Gill", "homeAddress": " 8069 Deep in the slums", "jobAddress": "180 Montgomery St Ste 700", "homeLat": -68.005514, "homeLng": -64.511719 },
   { "firstName": "Julio", "lastName": "Daldon", "homeAddress": "33 No fundo da favela", "jobAddress": "180 Montgomery St Ste 700", "homeLat": -22.905254, "homeLng":-43.231888 },
   { "firstName": "Brooke", "lastName": "Perry", "homeAddress": "756 Frog Juice Ave ", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 17.981346, "homeLng": -69.873047 },
@@ -891,19 +894,22 @@
                 });
             }
 
-            function displayAllOfficersAndSites() {
-                displayAllSites(); // Show all the work sites first
-                officerLayer.clearLayers(); // Clear any previous officer markers
+            function plotOfficers(officerList) {
+                officerLayer.clearLayers();
                 const officerIcon = createColoredIcon('#111827', { scale: 0.7 }); // Small black pin
 
-                officers.forEach(officer => {
+                officerList.forEach(officer => {
                     if (officer.homeLat && officer.homeLng) {
                         const homeMarker = L.marker([officer.homeLat, officer.homeLng], { icon: officerIcon })
                             .addTo(officerLayer);
                         homeMarker.bindPopup(`<b>${officer.firstName} ${officer.lastName}</b><br>${officer.homeAddress}`);
                     }
                 });
+            }
 
+            function displayAllOfficersAndSites() {
+                displayAllSites(); // Show all the work sites first
+                plotOfficers(officers); // Plot all officers
                 map.setView([37.7749, -122.4194], 12); // zoom out a bit to see more
             }
 
@@ -1229,6 +1235,8 @@
             document.getElementById('back-from-all-officers-btn').addEventListener('click', () => {
                 switchView(initialView);
                 displayAllSites();
+                document.getElementById('officer-search-input').value = '';
+                document.getElementById('officer-suggestions').innerHTML = '';
                 map.setView([37.7749, -122.4194], 13);
             });
 
@@ -1253,6 +1261,44 @@
                 switchView(siteSearchView);
                 officerLayer.clearLayers();
                 allSitesLayer.clearLayers();
+            });
+
+            const officerSearchInput = document.getElementById('officer-search-input');
+            const officerSuggestionsContainer = document.getElementById('officer-suggestions');
+
+            officerSearchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                officerSuggestionsContainer.innerHTML = '';
+
+                if (!query) {
+                    plotOfficers(officers); // If query is empty, show all
+                    return;
+                }
+
+                const filteredOfficers = officers.filter(officer => {
+                    const fullName = `${officer.firstName} ${officer.lastName}`.toLowerCase();
+                    return fullName.includes(query);
+                });
+                
+                plotOfficers(filteredOfficers); // Live filter the map pins
+
+                // Create and display suggestions
+                filteredOfficers.forEach((officer, index) => {
+                    const suggestionDiv = document.createElement('div');
+                    suggestionDiv.className = 'p-3 bg-white text-gray-900 rounded-lg hover:bg-gray-200 cursor-pointer animate-slide-in-up';
+                    suggestionDiv.style.animationDelay = `${index * 30}ms`;
+                    const fullName = `${officer.firstName} ${officer.lastName}`;
+                    suggestionDiv.textContent = fullName;
+                    suggestionDiv.onclick = () => {
+                        officerSearchInput.value = fullName;
+                        officerSuggestionsContainer.innerHTML = '';
+                        plotOfficers([officer]); // Plot only the selected officer
+                        if (officer.homeLat && officer.homeLng) {
+                            map.setView([officer.homeLat, officer.homeLng], 15);
+                        }
+                    };
+                    officerSuggestionsContainer.appendChild(suggestionDiv);
+                });
             });
             
             // Initial State
