@@ -1,0 +1,1198 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SF Site & Route Map</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- LeafletJS for the interactive map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        #map { 
+            height: 100vh; 
+        }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111827; /* gray-900 */
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563; /* gray-600 */
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* gray-500 */
+        }
+        /* Numbered route markers */
+        .route-marker-icon {
+            background-color: #ffffff;
+            border: 2px solid #111827; /* gray-900 */
+            color: #111827;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        /* UI Panel transitions */
+        .view-panel {
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+        .view-panel.hidden {
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            position: absolute;
+            width: calc(100% - 3rem); /* p-6 is 1.5rem on each side */
+        }
+
+        /* Staggered list animation */
+        @keyframes slide-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-slide-in-up {
+            animation: slide-in-up 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="antialiased bg-gray-100 text-gray-800">
+
+    <div id="app-container">
+        <div class="flex flex-col md:flex-row h-screen">
+            <!-- Sidebar -->
+            <aside class="w-full md:w-1/3 lg:w-1/4 bg-gray-900 text-gray-300 shadow-2xl flex flex-col">
+                <div class="p-6 border-b border-gray-700/50">
+                    <h1 class="text-2xl text-white tracking-wider">SF Map</h1>
+                    <p class="text-sm text-gray-400">Developed by Rochak Kadel</p>
+                </div>
+                
+                <div class="flex-grow p-6 overflow-y-auto custom-scrollbar relative">
+                    <!-- View for initial buttons -->
+                    <div id="initial-view" class="view-panel space-y-4">
+                        <button id="show-relief-routes-btn" class="w-full text-center p-4 bg-white text-gray-900 rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-all duration-200 transform hover:scale-105 active:scale-100">
+                            Break Reliefs Routes
+                        </button>
+                        <button id="show-site-search-btn" class="w-full text-center p-4 bg-white text-gray-900 rounded-lg shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-all duration-200 transform hover:scale-105 active:scale-100">
+                            Search Site Officers
+                        </button>
+                    </div>
+
+                      <!-- View for Site Search -->
+                    <div id="site-search-view" class="view-panel hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl text-white">Search Site</h2>
+                            <button id="back-to-initial-from-search-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        </div>
+                        <input type="text" id="site-search-input" placeholder="Type a site name or address..." class="w-full p-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <div id="site-suggestions" class="mt-4 space-y-2 max-h-96 overflow-y-auto custom-scrollbar"></div>
+                    </div>
+
+                    <!-- View for relief employee list -->
+                    <div id="relief-list-view" class="view-panel hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl text-white">Relief Staff</h2>
+                            <button id="back-to-initial-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        </div>
+                        <div id="relief-employee-list" class="space-y-3">
+                            <!-- Employee buttons will be injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Selected Route Information Section -->
+                    <div id="route-info-section" class="view-panel hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 id="route-employee-name" class="text-xl text-white"></h3>
+                            <button id="back-to-relief-list-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        </div>
+                        <div id="route-schedule" class="space-y-3">
+                            <!-- Schedule details will be injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Officers at Site View -->
+                    <div id="officer-list-view" class="view-panel hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 id="officer-site-name" class="text-xl text-white"></h3>
+                            <button id="back-to-site-search-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        </div>
+                        <div id="officer-list" class="space-y-3">
+                              <!-- Officer details will be injected here -->
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Map container -->
+            <main class="w-full md:w-2/3 lg:w-3/4 relative">
+                <div id="map"></div>
+                <!-- Legends Container -->
+                <div id="legends-container" class="absolute top-4 right-4 space-y-3 z-[1000]">
+                        <!-- Manager Legend -->
+                    <div id="manager-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-4 rounded-lg shadow-lg transition-opacity duration-300 border border-gray-700/50">
+                        <div id="manager-legend" class="space-y-2">
+                            <!-- Legend items will be injected here by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Relief Site Legend -->
+                    <div id="relief-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-4 rounded-lg shadow-lg transition-opacity duration-300 hidden max-h-[70vh] overflow-y-auto custom-scrollbar border border-gray-700/50">
+                        <div id="relief-legend-list" class="space-y-2">
+                            <!-- Relief site legend items will be injected here -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURES --- //
+        const managerColors = {
+            "Doug Fletcher": "#3b82f6", // Blue
+            "Jason Daugherty": "#f97316", // Orange
+            "Aldo Diaz": "#22c55e", // Green
+            "Mohamed Ezzat": "#ef4444", // Red
+            "Inderprit Gill": "#8b5cf6"  // Violet
+        };
+
+        const sites = {
+            "Doug Fletcher": [
+                { name: "The Contemporary Jewish Museum", address: "736 Mission St", lat: 37.7857, lng: -122.4042 },
+                { name: "JLL - 600 California St", address: "600 California St", lat: 37.7925, lng: -122.4024 },
+                { name: "JLL - 120 Kearny St (PMC)", address: "120 Kearny St", lat: 37.7892, lng: -122.4040 }
+            ],
+            "Jason Daugherty": [
+                { name: "CBRE - 1128 Market St", address: "1128 Market St", lat: 37.7788, lng: -122.4132 },
+                { name: "The Potrero Power Station", address: "420 23rd St", lat: 37.7570, lng: -122.3850 },
+                { name: "Sutro Tower, Inc", address: "1 La Avanzada St", lat: 37.7552, lng: -122.4528 },
+                { name: "CBRE - 500 Howard St", address: "500 Howard St", lat: 37.7876, lng: -122.3958 },
+                { name: "CBRE - 500 Pine", address: "500 Pine St", lat: 37.7915, lng: -122.4029 },
+                { name: "AJ Capital Partners", address: "1800 Mission St", lat: 37.7675, lng: -122.4196 },
+                { name: "Dalum Corporation", address: "130 Battery St", lat: 37.7942, lng: -122.3992 },
+                { name: "Sequoias", address: "1400 Geary Blvd", lat: 37.7852, lng: -122.4300 },
+                { name: "JLL - 300 Kansas St", address: "300 Kansas St", lat: 37.7676, lng: -122.4045 },
+                { name: "Swig - 633 Folsom St", address: "633 Folsom St", lat: 37.7836, lng: -122.3973 },
+                { name: "Swig - 501 2nd St", address: "501 2nd St", lat: 37.7845, lng: -122.3912 },
+                { name: "Doublewood Investment", address: "111 Pine St", lat: 37.7932, lng: -122.4000 },
+                { name: "Novva", address: "400 Paul Ave", lat: 37.7228, lng: -122.4209 },
+                { name: "633 Folsom", address: "633 Folsom St", lat: 37.7836, lng: -122.3973 },
+                { name: "1 Kearny", address: "1 Kearny St", lat: 37.7877, lng: -122.4043 },
+                { name: "1200 Van Ness", address: "1200 Van Ness Ave", lat: 37.7865, lng: -122.4217 }
+            ],
+            "Aldo Diaz": [
+                { name: "181 Fremont Street", address: "181 Fremont St", lat: 37.7895, lng: -122.3950 },
+                { name: "Harvest - 274 Brannan St", address: "274 Brannan St", lat: 37.7820, lng: -122.3908 },
+                { name: "Harvest - 360 Spear St", address: "360 Spear St", lat: 37.7861, lng: -122.3908 },
+                { name: "Tavaco - 1035 Market St", address: "1035 Market St", lat: 37.7806, lng: -122.4105 },
+                { name: "JLL - 150 Spear St", address: "150 Spear St", lat: 37.7909, lng: -122.3941 },
+                { name: "RREG - 750 Battery Corp.", address: "750 Battery St", lat: 37.7984, lng: -122.4011 },
+                { name: "Tusker Corporation", address: "1635 Divisadero St", lat: 37.7844, lng: -122.4400 },
+                { name: "Van Barton - 115 Sansome", address: "115 Sansome St", lat: 37.7920, lng: -122.4010 },
+                { name: "CBRE - 180 Montgomery", address: "180 Montgomery St", lat: 37.7895, lng: -122.4030 },
+                { name: "Swig - 220 Montgomery St", address: "220 Montgomery St", lat: 37.7901, lng: -122.4027 },
+                { name: "ECP - 601 California St", address: "601 California St", lat: 37.7925, lng: -122.4032 },
+                { name: "EPA - 711 Eddy St", address: "711 Eddy St", lat: 37.7828, lng: -122.4208 },
+                { name: "WPA - 1280 Laguna", address: "1280 Laguna St", lat: 37.7849, lng: -122.4293 },
+                { name: "CW - 71 Stevenson St", address: "71 Stevenson St", lat: 37.7885, lng: -122.3995 }
+            ],
+            "Mohamed Ezzat": [
+                { name: "Colliers - 153 Kearny St", address: "153 Kearny St", lat: 37.7896, lng: -122.4042 },
+                { name: "JLL - 110 Sutter", address: "110 Sutter St", lat: 37.7903, lng: -122.4037 },
+                { name: "Colliers - 240 Stockton St", address: "240 Stockton St", lat: 37.7881, lng: -122.4069 },
+                { name: "Colliers - 26 O'Farrell St", address: "26 O'Farrell St", lat: 37.7871, lng: -122.4065 },
+                { name: "G&G Partners", address: "30 Grant Ave", lat: 37.7877, lng: -122.4055 },
+                { name: "YCS Investments", address: "170 Maiden Lane", lat: 37.7885, lng: -122.4053 },
+                { name: "Olympic Club Lakeside", address: "599 Skyline Blvd", lat: 37.7214, lng: -122.4960 },
+                { name: "CW - 456 Montgomery St", address: "456 Montgomery St", lat: 37.7927, lng: -122.4031 },
+                { name: "Colliers - 717 Market St", address: "717 Market St", lat: 37.7869, lng: -122.4039 },
+                { name: "JLL - 201 Mission St", address: "201 Mission St", lat: 37.7915, lng: -122.3947 },
+                { name: "Van Barton - 101 Mission", address: "101 Mission St", lat: 37.7927, lng: -122.3951 },
+                { name: "Van Barton - 100 Montgomery", address: "100 Montgomery St", lat: 37.7890, lng: -122.4032 },
+                { name: "Colliers - 166 Geary", address: "166 Geary St", lat: 37.7883, lng: -122.4061 }
+            ],
+            "Inderprit Gill": [
+                { name: "Seligman - 311 California St", address: "311 California St", lat: 37.7931, lng: -122.4005 },
+                { name: "JKL Corporation", address: "90 New Montgomery St", lat: 37.7869, lng: -122.4009 },
+                { name: "Seligman - 785 Market St", address: "785 Market St", lat: 37.7860, lng: -122.4047 },
+                { name: "Metrovation", address: "230 California St", lat: 37.7937, lng: -122.3991 },
+                { name: "JLL - 101 Montgomery St", address: "101 Montgomery St", lat: 37.7890, lng: -122.4032 },
+                { name: "JLL - 425 California St", address: "425 California St", lat: 37.7935, lng: -122.4019 },
+                { name: "Transwestern - 210 Post St", address: "210 Post St", lat: 37.7887, lng: -122.4063 },
+                { name: "Seaker & Sons", address: "30 Maiden Lane", lat: 37.7880, lng: -122.4057 },
+                { name: "Flynn Properties", address: "222 Kearny St", lat: 37.7903, lng: -122.4043 },
+                { name: "TMG LLC - 150 Post St", address: "150 Post St", lat: 37.7891, lng: -122.4054 },
+                { name: "Transwestern - 1019 Market St", address: "1019 Market St", lat: 37.7812, lng: -122.4100 },
+                { name: "CW - 425 Market St", address: "425 Market St", lat: 37.7920, lng: -122.3971 }
+            ]
+        };
+        
+        const breakReliefs = {
+            "Yolanda Perez": {
+                schedule: [
+                    { locationName: "90 New Montgomery St", startTime: "8:30", endTime: "8:45" },
+                    { locationName: "71 Stevenson St", startTime: "8:50", endTime: "9:05" },
+                    { locationName: "30 Grant Ave", startTime: "9:15", endTime: "9:30" },
+                    { locationName: "Break", startTime: "9:30", endTime: "10:00", isBreak: true },
+                    { locationName: "1019 Market St", startTime: "10:00", endTime: "10:15" },
+                    { locationName: "90 New Montgomery St", startTime: "10:45", endTime: "11:00" },
+                    { locationName: "30 Grant Ave", startTime: "11:15", endTime: "11:45" },
+                    { locationName: "71 Stevenson St", startTime: "12:00", endTime: "12:15" },
+                    { locationName: "1019 Market St", startTime: "12:45", endTime: "13:00" },
+                    { locationName: "30 Grant Ave", startTime: "13:15", endTime: "13:30" }
+                ]
+            },
+             "Apithany Hayes": { 
+                schedule: [
+                    { locationName: "101 Montgomery St", startTime: "9:00", endTime: "9:15" },
+                    { locationName: "425 California St", startTime: "9:25", endTime: "9:40" },
+                    { locationName: "153 Kearny St", startTime: "9:50", endTime: "10:05" },
+                    { locationName: "Break", startTime: "10:05", endTime: "10:20", isBreak: true },
+                    { locationName: "101 Montgomery St", startTime: "10:45", endTime: "11:15" },
+                    { locationName: "425 California St", startTime: "11:25", endTime: "11:55" },
+                    { locationName: "153 Kearny St", startTime: "12:05", endTime: "12:35" },
+                    { locationName: "150 Post St", startTime: "12:40", endTime: "13:40" },
+                    { locationName: "Lunch", startTime: "13:45", endTime: "14:15", isBreak: true },
+                    { locationName: "101 Montgomery St", startTime: "14:15", endTime: "14:30" },
+                    { locationName: "425 California St", startTime: "14:40", endTime: "14:55" },
+                    { locationName: "153 Kearny St", startTime: "15:05", endTime: "15:20" }
+                ]
+            },
+            "Imran Anwar": {
+                schedule: [
+                    { locationName: "210 Post St", startTime: "9:00", endTime: "9:15" },
+                    { locationName: "30 Maiden Lane", startTime: "9:30", endTime: "9:45" },
+                    { locationName: "Break", startTime: "9:45", endTime: "10:15", isBreak: true },
+                    { locationName: "210 Post St", startTime: "10:15", endTime: "10:45" },
+                    { locationName: "111 Pine St", startTime: "11:00", endTime: "11:30" },
+                    { locationName: "30 Maiden Lane", startTime: "11:45", endTime: "12:15" },
+                    { locationName: "210 Post St", startTime: "12:30", endTime: "12:45" },
+                    { locationName: "30 Maiden Lane", startTime: "13:00", endTime: "13:15" }
+                ]
+            },
+            "Eli Walin": {
+                schedule: [
+                    { locationName: "750 Battery St", startTime: "9:00", endTime: "9:15" },
+                    { locationName: "222 Kearny St", startTime: "9:35", endTime: "9:50" },
+                    { locationName: "Break", startTime: "9:50", endTime: "10:45", isBreak: true },
+                    { locationName: "750 Battery St", startTime: "10:45", endTime: "11:15" },
+                    { locationName: "222 Kearny St", startTime: "11:45", endTime: "12:15" },
+                    { locationName: "750 Battery St", startTime: "12:35", endTime: "12:50" },
+                    { locationName: "222 Kearny St", startTime: "13:15", endTime: "13:30" },
+                    { locationName: "230 California St", startTime: "15:00", endTime: "19:00" }
+                ]
+            },
+            "Melaysia Horn": {
+                schedule: [
+                    { locationName: "101 Mission", startTime: "8:30", endTime: "8:45" },
+                    { locationName: "110 Sutter", startTime: "9:00", endTime: "9:15" },
+                    { locationName: "26 O'Farrell St", startTime: "9:25", endTime: "9:40" },
+                    { locationName: "101 Mission", startTime: "10:30", endTime: "11:00" },
+                    { locationName: "110 Sutter", startTime: "11:15", endTime: "11:45" },
+                    { locationName: "26 O'Farrell St", startTime: "11:55", endTime: "12:25" },
+                    { locationName: "Lunch", startTime: "12:25", endTime: "13:00", isBreak: true },
+                    { locationName: "101 Mission", startTime: "13:00", endTime: "13:15" },
+                    { locationName: "110 Sutter", startTime: "13:30", endTime: "13:45" },
+                    { locationName: "1 Kearny", startTime: "13:55", endTime: "14:25" },
+                    { locationName: "26 O'Farrell St", startTime: "14:30", endTime: "14:45" }
+                ]
+            },
+            "Adham Shaef": {
+                schedule: [
+                    { locationName: "115 Sansome", startTime: "7:00", endTime: "7:15" },
+                    { locationName: "240 Stockton St", startTime: "7:30", endTime: "7:45" },
+                    { locationName: "717 Market St", startTime: "8:00", endTime: "8:15" },
+                    { locationName: "500 Pine", startTime: "8:30", endTime: "8:45" },
+                    { locationName: "Lunch", startTime: "8:45", endTime: "9:15", isBreak: true },
+                    { locationName: "115 Sansome", startTime: "9:15", endTime: "9:45" },
+                    { locationName: "240 Stockton St", startTime: "10:00", endTime: "10:30" },
+                    { locationName: "717 Market St", startTime: "10:40", endTime: "11:10" },
+                    { locationName: "500 Pine", startTime: "11:25", endTime: "11:55" },
+                    { locationName: "Break", startTime: "11:55", endTime: "12:25", isBreak: true },
+                    { locationName: "115 Sansome", startTime: "12:25", endTime: "12:40" },
+                    { locationName: "240 Stockton St", startTime: "12:55", endTime: "13:10" },
+                    { locationName: "500 Pine", startTime: "13:20", endTime: "13:35" },
+                    { locationName: "717 Market St", startTime: "13:45", endTime: "14:00" }
+                ]
+            }
+        };
+        
+        // This data is parsed from the provided PDF. Note: homeLat/homeLng added for demonstration.
+        const officers = [
+            { "firstName": "Aziz", "lastName": "Chakib", "homeAddress": "805 Leavenworth St Apt 501", "jobAddress": "500 Howard St" },
+            { "firstName": "Calvin", "lastName": "Horton", "homeAddress": "2120 Railroad Ave Ste 103", "jobAddress": "180 Montgomery St Ste 1650" },
+            { "firstName": "Axel", "lastName": "Garcia Ramirez", "homeAddress": "4065 Lyon Ave Apt 2", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Fred", "lastName": "Bess Jr", "homeAddress": "794 Button Ave # E21", "jobAddress": "181 Fremont St", "homeLat": 37.8044, "homeLng": -122.2711 },
+            { "firstName": "Liam", "lastName": "Yurman", "homeAddress": "1360 E 7th St", "jobAddress": "120 Kearny St" },
+            { "firstName": "Rashad", "lastName": "Hussin", "homeAddress": "626 22nd Ave", "jobAddress": "150 Spear St Ste 775" },
+            { "firstName": "April", "lastName": "Johnson", "homeAddress": "637 Laguna St", "jobAddress": "150 Spear St Ste 775" },
+            { "firstName": "Maryann", "lastName": "Fillari", "homeAddress": "16401 San Pablo Ave Spc 441", "jobAddress": "150 Spear St Ste 775" },
+            { "firstName": "Paul", "lastName": "Kramlich", "homeAddress": "725 Washington Ave Apt A", "jobAddress": "120 Kearny St" },
+            { "firstName": "Karmen", "lastName": "Lindsey", "homeAddress": "16001 Liberty St Apt 104", "jobAddress": "456 Montgomery St" },
+            { "firstName": "Jerome", "lastName": "Griffin", "homeAddress": "291 10th St", "jobAddress": "717 Market St" },
+            { "firstName": "John", "lastName": "Dockus", "homeAddress": "1618 Lombard St Apt 2", "jobAddress": "425 Market St" },
+            { "firstName": "Basem", "lastName": "Abdalla", "homeAddress": "1070 Bridgeview Way Apt 1606", "jobAddress": "181 Fremont St", "homeLat": 37.6879, "homeLng": -122.4702 },
+            { "firstName": "Edgardo", "lastName": "Diala", "homeAddress": "34 Hillview Ct", "jobAddress": "120 Kearny St" },
+            { "firstName": "Twanisha", "lastName": "Brown", "homeAddress": "2644 35th Ave Apt A", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Mokrane", "lastName": "Chemakh", "homeAddress": "1540 Jackson St Apt 302", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Adrian", "lastName": "Gutter", "homeAddress": "244 Rodeo Ave Apt 3", "jobAddress": "71 Stevenson St Ste 1440" },
+            { "firstName": "Danilo", "lastName": "Andrey", "homeAddress": "50 Rizal St Apt 703", "jobAddress": "1635 Divisadero St" },
+            { "firstName": "Valente", "lastName": "Banez", "homeAddress": "88 Perry St Apt 535", "jobAddress": "201 Mission St" },
+            { "firstName": "Jeffrey", "lastName": "McHenry", "homeAddress": "419 Faxon Ave Apt B", "jobAddress": "1800 Mission St" },
+            { "firstName": "Eric", "lastName": "Rodriguez", "homeAddress": "460 37th St", "jobAddress": "120 Kearny St" },
+            { "firstName": "John", "lastName": "Cliffe", "homeAddress": "2443 Fillmore St Apt 127", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "James", "lastName": "Mann", "homeAddress": "225 Clifton St Apt 204", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Rufus", "lastName": "Watkins", "homeAddress": "2060 Ofarrell St Apt 102", "jobAddress": "425 California St" },
+            { "firstName": "Samson", "lastName": "Abraha", "homeAddress": "2911 Myrtle St", "jobAddress": "1800 Mission St" },
+            { "firstName": "Victor", "lastName": "Aceves-Beltran", "homeAddress": "1359 Sacramento St Apt A3", "jobAddress": "71 Stevenson St Ste 1440" },
+            { "firstName": "Abraham", "lastName": "Agtarap", "homeAddress": "1881 46th Ave", "jobAddress": "55 Hawthorne St" },
+            { "firstName": "Angel", "lastName": "Aguilar", "homeAddress": "88 Perry St Apt 634", "jobAddress": "500 Howard St" },
+            { "firstName": "Sola", "lastName": "Aina", "homeAddress": "2019 High St Apt 4", "jobAddress": "166 Geary Street" },
+            { "firstName": "Burt", "lastName": "Amaral", "homeAddress": "3953 Mission Way", "jobAddress": "115 Sansome St" },
+            { "firstName": "Andre", "lastName": "Paloma", "homeAddress": "70 Oaklawn Dr apt 4", "jobAddress": "599 Skyline Blvd" },
+            { "firstName": "Imran", "lastName": "Anwar", "homeAddress": "775 Post St Apt 109", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Apolinario", "lastName": "Balbin", "homeAddress": "50 Ward Ct Apt 9", "jobAddress": "181 Fremont St", "homeLat": 37.6547, "homeLng": -122.4077 },
+            { "firstName": "Louis", "lastName": "Balestier", "homeAddress": "22628 Valley View Dr", "jobAddress": "425 Market St" },
+            { "firstName": "Quentae", "lastName": "Batiste", "homeAddress": "1094 Ridgewood Dr", "jobAddress": "425 Market St" },
+            { "firstName": "Tenard", "lastName": "Bautista", "homeAddress": "276 Verano Dr", "jobAddress": "425 California St" },
+            { "firstName": "Ivory", "lastName": "Bennett", "homeAddress": "2776 Jo Ann Dr", "jobAddress": "600 California St" },
+            { "firstName": "Raoof", "lastName": "Bhat", "homeAddress": "825 Bush St Apt 506", "jobAddress": "201 Mission St" },
+            { "firstName": "Matthew", "lastName": "Brown", "homeAddress": "1604 San Leandro Blvd Unit 505", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Serinia", "lastName": "Brown", "homeAddress": "3574 E 18th St Apt 107", "jobAddress": "120 Kearny St" },
+            { "firstName": "Cassandra", "lastName": "Bunton", "homeAddress": "579 Valencia St Apt 1", "jobAddress": "181 Fremont St" },
+            { "firstName": "Samuel", "lastName": "Cantu Jr", "homeAddress": "3121 Cochise Way", "jobAddress": "210 Post St" },
+            { "firstName": "Miguel", "lastName": "Cardenas", "homeAddress": "5080 Mesa Ridge Dr", "jobAddress": "181 Fremont St" },
+            { "firstName": "Michael", "lastName": "Castillo", "homeAddress": "1137 Langlie Way", "jobAddress": "90 New Montgomery St" },
+            { "firstName": "Ali", "lastName": "Chakib", "homeAddress": "16 Camelback Ct # 16", "jobAddress": "750 Battery St" },
+            { "firstName": "Hung", "lastName": "Chan", "homeAddress": "38 Williar Ave", "jobAddress": "30 Grant Ave" },
+            { "firstName": "Rachid", "lastName": "Chengly", "homeAddress": "189 Elder Ave", "jobAddress": "111 Pine St" },
+            { "firstName": "David", "lastName": "Chong", "homeAddress": "447 Joost Ave", "jobAddress": "601 California St" },
+            { "firstName": "Sheldon", "lastName": "Coulon", "homeAddress": "114 Arcangel Way", "jobAddress": "785 Market St" },
+            { "firstName": "Joseph", "lastName": "Crowley", "homeAddress": "780 Halie Ct", "jobAddress": "456 Montgomery St" },
+            { "firstName": "Regginal", "lastName": "Curry", "homeAddress": "1700 E 14th St", "jobAddress": "101 Montgomery St" },
+            { "firstName": "Santos", "lastName": "Dalere", "homeAddress": "840 Chenery St", "jobAddress": "120 Kearny St" },
+            { "firstName": "Jamikia", "lastName": "Davis", "homeAddress": "160 14th St Apt 402", "jobAddress": "425 Market St" },
+            { "firstName": "Johnny", "lastName": "Denham", "homeAddress": "1288 Mission St Apt 306", "jobAddress": "1019 Market St" },
+            { "firstName": "Jason", "lastName": "Deschain", "homeAddress": "3341 Los Prados St Apt 1", "jobAddress": "71 Stevenson St Ste 1440" },
+            { "firstName": "Dana", "lastName": "Dorham", "homeAddress": "1619 Chestnut St", "jobAddress": "425 Market St" },
+            { "firstName": "Marcia", "lastName": "Duncan", "homeAddress": "55 Valle Vista Ave Apt 708", "jobAddress": "425 Market St" },
+            { "firstName": "Deborah", "lastName": "Edwards-Rhodman", "homeAddress": "1013 Syracuse Cir", "jobAddress": "501 2nd St" },
+            { "firstName": "William", "lastName": "Elrod", "homeAddress": "470 Noor Ave Ste B apt 1017", "jobAddress": "120 Kearny St" },
+            { "firstName": "Tadesse", "lastName": "Eshete", "homeAddress": "351 Turk St Apt 1115", "jobAddress": "101 Mission St" },
+            { "firstName": "Rickey", "lastName": "Fairley", "homeAddress": "1548 Quesada Ave", "jobAddress": "71 Stevenson St Ste 1440" },
+            { "firstName": "Wonde", "lastName": "Fanta", "homeAddress": "88 Perry st Apt 204", "jobAddress": "750 Battery St" },
+            { "firstName": "Shaikh", "lastName": "Fayyaz", "homeAddress": "1080 Vasconcellos Ave", "jobAddress": "201 Mission St" },
+            { "firstName": "Alexander", "lastName": "Ferber", "homeAddress": "729 Jones St Apt 306", "jobAddress": "101 Mission St" },
+            { "firstName": "Lloyd", "lastName": "Fishback", "homeAddress": "678 24th Ave", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Ezequiel", "lastName": "Frau", "homeAddress": "311 W 12th St", "jobAddress": "274 Brannan St" },
+            { "firstName": "Dean", "lastName": "Galamay", "homeAddress": "1420 Gateview Ct Unit 1420D", "jobAddress": "222 Kearny St" },
+            { "firstName": "Jermaine", "lastName": "Gardner", "homeAddress": "1135 Steiner St Apt 105", "jobAddress": "181 Fremont St" },
+            { "firstName": "Stephen", "lastName": "Gibney", "homeAddress": "1233 S Mayfair Ave", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Jacqueline", "lastName": "Gomez", "homeAddress": "9889 Empire Rd", "jobAddress": "600 California St" },
+            { "firstName": "Michael", "lastName": "Gorman", "homeAddress": "4822 Lodi Way", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Sherri", "lastName": "Grant", "homeAddress": "208 Darley Dr", "jobAddress": "1280 Laguna St" },
+            { "firstName": "Demello", "lastName": "Grosse", "homeAddress": "7633 22nd St", "jobAddress": "717 Market St" },
+            { "firstName": "Alexis", "lastName": "Guillen", "homeAddress": "259 Frankfort St", "jobAddress": "120 Kearny St" },
+            { "firstName": "Shalondra", "lastName": "Guillory", "homeAddress": "460 Inverness Dr", "jobAddress": "120 Kearny St" },
+            { "firstName": "Tesfayohannes", "lastName": "Haile", "homeAddress": "1010 Bush St Apt 219", "jobAddress": "717 Market St" },
+            { "firstName": "Kimberly", "lastName": "Hale", "homeAddress": "243 Holly Ave", "jobAddress": "150 Post St" },
+            { "firstName": "Robert", "lastName": "Hand", "homeAddress": "2410 E Swain Rd", "jobAddress": "222 Kearny St" },
+            { "firstName": "Reynard", "lastName": "Harden", "homeAddress": "640 Clay St Apt 344", "jobAddress": "311 California St" },
+            { "firstName": "Luis", "lastName": "Hernandez", "homeAddress": "101 Bismark St Apt C", "jobAddress": "501 2nd St" },
+            { "firstName": "Lance", "lastName": "Hillier", "homeAddress": "739 Stockton St", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Latarra", "lastName": "Honeycutt-Brown", "homeAddress": "3119 Southampton Ct Apt 24", "jobAddress": "101 Mission St" },
+            { "firstName": "Hugh", "lastName": "Dempsey", "homeAddress": "2030 24th Ave", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Jeffrey", "lastName": "Hughley", "homeAddress": "4224 Porter St", "jobAddress": "601 California St" },
+            { "firstName": "Janice", "lastName": "Inarda-Shield", "homeAddress": "3400 Richmond Pkwy Apt 1223", "jobAddress": "26 Ofarrell St" },
+            { "firstName": "Delon", "lastName": "Johnson", "homeAddress": "14744 Washington Ave Apt 415", "jobAddress": "1019 Market St" },
+            { "firstName": "Jerome", "lastName": "Jordan", "homeAddress": "747 San Pablo Ave Apt 1", "jobAddress": "1019 Market St" },
+            { "firstName": "Elsy", "lastName": "Juarez", "homeAddress": "556 2nd St", "jobAddress": "600 California St" },
+            { "firstName": "Hari", "lastName": "Karki", "homeAddress": "939 S 55th St", "jobAddress": "181 Fremont St" },
+            { "firstName": "Subana", "lastName": "Karki", "homeAddress": "939 S 55th St", "jobAddress": "181 Fremont St" },
+            { "firstName": "Peter", "lastName": "Keys", "homeAddress": "179 Larissa Ln", "jobAddress": "101 Montgomery St" },
+            { "firstName": "Julius", "lastName": "Kobza", "homeAddress": "820 Corcoran Ave", "jobAddress": "100 Montgomery St" },
+            { "firstName": "Aleksandrs", "lastName": "Kotlovs", "homeAddress": "1447 Jones St Apt 3", "jobAddress": "425 Market St" },
+            { "firstName": "Perfidia Fia", "lastName": "Kyono", "homeAddress": "766 Higate Dr", "jobAddress": "425 Market St" },
+            { "firstName": "Jorge", "lastName": "Lahiff", "homeAddress": "174 Judson Ave", "jobAddress": "599 Skyline Blvd" },
+            { "firstName": "Alexander", "lastName": "Lewis", "homeAddress": "2704 Harrison St", "jobAddress": "230 California St" },
+            { "firstName": "Yun", "lastName": "Lezeuz", "homeAddress": "1714 E 15th St", "jobAddress": "101 Montgomery St" },
+            { "firstName": "Asia", "lastName": "Mack", "homeAddress": "41 Anair Way", "jobAddress": "111 Pine St" },
+            { "firstName": "Myint", "lastName": "Maung", "homeAddress": "2326 27th Ave", "jobAddress": "210 Post St" },
+            { "firstName": "Anthony", "lastName": "Mitchell", "homeAddress": "160 Pecks Ln", "jobAddress": "425 Market St" },
+            { "firstName": "Richard", "lastName": "Mollette", "homeAddress": "4061 E Castro Valley Blvd", "jobAddress": "101 Montgomery St" },
+            { "firstName": "Euikeun", "lastName": "Myung", "homeAddress": "225 Hyde St Apt 620", "jobAddress": "711 Eddy St" },
+            { "firstName": "Reginald", "lastName": "Neal", "homeAddress": "905 Columbus Ave Apt 126", "jobAddress": "220 Montgomery St" },
+            { "firstName": "John", "lastName": "Nelson", "homeAddress": "401 Presidio St", "jobAddress": "601 California St" },
+            { "firstName": "Simon", "lastName": "Ng", "homeAddress": "15487 Tern Ct", "jobAddress": "711 Eddy St" },
+            { "firstName": "Mamadou", "lastName": "Nguer", "homeAddress": "1545 Eddy St Apt 215", "jobAddress": "711 Eddy St" },
+            { "firstName": "Osamede", "lastName": "Obazee", "homeAddress": "23 Fleetwood Drive", "jobAddress": "711 Eddy St" },
+            { "firstName": "Chy", "lastName": "Okochi", "homeAddress": "1259 Revere Ave", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Roberto", "lastName": "Orbegoso", "homeAddress": "979 Hanover St", "jobAddress": "120 Kearny St" },
+            { "firstName": "Kehinde", "lastName": "Oshin", "homeAddress": "640 Clay St Unit 128", "jobAddress": "425 California St" },
+            { "firstName": "Sherina", "lastName": "Owens", "homeAddress": "1869 Santa Fe St", "jobAddress": "170 Maiden Ln" },
+            { "firstName": "Daniel", "lastName": "Ozabuki", "homeAddress": "795 Geary St Apt 303", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Marian", "lastName": "Perez", "homeAddress": "78 Vendome Ave", "jobAddress": "240 Stockton St" },
+            { "firstName": "Rommel", "lastName": "Perez", "homeAddress": "125 Mullen Ave", "jobAddress": "150 Spear St Ste 775" },
+            { "firstName": "Stanislaw", "lastName": "Poczan", "homeAddress": "1435 Laguna St Apt 2", "jobAddress": "120 Kearny St" },
+            { "firstName": "Danishwar", "lastName": "Prakash", "homeAddress": "P.O. Box 57150", "jobAddress": "1635 Divisadero St" },
+            { "firstName": "Raul", "lastName": "Rebadulla", "homeAddress": "3478 Hillsborough Dr", "jobAddress": "1635 Divisadero St" },
+            { "firstName": "Reginald", "lastName": "Stamps", "homeAddress": "1534 Plaza Ln Apt 134", "jobAddress": "420 23rd St" },
+            { "firstName": "Deramus", "lastName": "Reynolds", "homeAddress": "680 Center Ave Apt 213", "jobAddress": "736 Mission St" },
+            { "firstName": "Dwight", "lastName": "Rhodman", "homeAddress": "1013 Syracuse Cir", "jobAddress": "111 Pine St" },
+            { "firstName": "Charlotte", "lastName": "Rivers", "homeAddress": "3185 Contra Loma Blvd B152", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Auxiliadora", "lastName": "Robelo", "homeAddress": "1515 38th Ave Apt 5", "jobAddress": "120 Kearny St" },
+            { "firstName": "Kimvenzor", "lastName": "Roca", "homeAddress": "262 Arleta Ave", "jobAddress": "1800 Mission St" },
+            { "firstName": "Romulo", "lastName": "Rismal", "homeAddress": "100 Bayview Dr", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Norman", "lastName": "Rosquites", "homeAddress": "2180 California St Apt 204", "jobAddress": "1280 Laguna St" },
+            { "firstName": "Carlos", "lastName": "Salmon Sanchez", "homeAddress": "2608 Larch Way", "jobAddress": "711 Eddy St" },
+            { "firstName": "Arleigh", "lastName": "Sandoc", "homeAddress": "6748 Mission St Apt 613", "jobAddress": "181 Fremont St" },
+            { "firstName": "Bradley", "lastName": "Sandoc", "homeAddress": "6748 Mission St Apt 613", "jobAddress": "425 Market St" },
+            { "firstName": "Ramiro", "lastName": "Saucedo", "homeAddress": "2818 Ingalls St", "jobAddress": "120 Kearny St" },
+            { "firstName": "Scott", "lastName": "Young", "homeAddress": "3019 23rd St # C", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Richard", "lastName": "Seddi", "homeAddress": "333 Randolph St Apt 18", "jobAddress": "30 Grant Ave" },
+            { "firstName": "Angela", "lastName": "Seward", "homeAddress": "2005 Laura Ave", "jobAddress": "90 New Montgomery St" },
+            { "firstName": "Johnathan", "lastName": "Shimek", "homeAddress": "524 Patricia Ave", "jobAddress": "599 Skyline Blvd" },
+            { "firstName": "Tenzin", "lastName": "Shrestha", "homeAddress": "629 38th St", "jobAddress": "181 Fremont St" },
+            { "firstName": "Moises", "lastName": "Silla", "homeAddress": "228 San Felipe Ave Apt 2", "jobAddress": "501 2nd St" },
+            { "firstName": "John", "lastName": "Skinner", "homeAddress": "268 Bush St", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Michael", "lastName": "Smith", "homeAddress": "3421 Hudson Ct Apt 98", "jobAddress": "1800 Mission St" },
+            { "firstName": "James", "lastName": "Stewart", "homeAddress": "355 Silver Ave", "jobAddress": "222 Kearny St" },
+            { "firstName": "Michael", "lastName": "Sullivan", "homeAddress": "1226 Grant Ave Unit 35", "jobAddress": "120 Kearny St" },
+            { "firstName": "Mohammed", "lastName": "Taifi", "homeAddress": "1650 Turk St", "jobAddress": "1280 Laguna St" },
+            { "firstName": "Philip", "lastName": "Tanti", "homeAddress": "668 Clay St Apt 100", "jobAddress": "111 Pine St" },
+            { "firstName": "Uo", "lastName": "Tauai", "homeAddress": "70 Navy Rd", "jobAddress": "501 2nd St" },
+            { "firstName": "Aaron", "lastName": "Taylor", "homeAddress": "1431 Jackson St Apt 414", "jobAddress": "425 California St" },
+            { "firstName": "Abraham", "lastName": "Tesfagiorgis", "homeAddress": "407 Fairmount Ave Apt 305", "jobAddress": "153 Kearny St" },
+            { "firstName": "Dexter", "lastName": "Thomas", "homeAddress": "1121 Addison St Apt 1", "jobAddress": "1800 Mission St" },
+            { "firstName": "Joseph", "lastName": "Tice", "homeAddress": "6748 Mission St # 218", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Brandon", "lastName": "Tucker", "homeAddress": "683 Frederick St", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Bassey", "lastName": "Udoh", "homeAddress": "6511 Bayview Dr", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "William", "lastName": "Villalobos", "homeAddress": "49 Harrington St Apt 1", "jobAddress": "181 Fremont St" },
+            { "firstName": "Antonio", "lastName": "Villasenor", "homeAddress": "8300 Oceanview Ter Apt 115", "jobAddress": "601 California St" },
+            { "firstName": "Oscar", "lastName": "Vivas-Ramirez", "homeAddress": "1045 Mission St Apt 422", "jobAddress": "100 Montgomery St" },
+            { "firstName": "Angelo", "lastName": "Vivero", "homeAddress": "1166 Chesapeake Dr", "jobAddress": "120 Kearny St" },
+            { "firstName": "Bishnu", "lastName": "Wagle", "homeAddress": "811 S 49th St", "jobAddress": "633 Folsom St Ste 100" },
+            { "firstName": "Eli", "lastName": "Walin", "homeAddress": "1492 Pacific Ave Apt 6", "jobAddress": "230 California St" },
+            { "firstName": "Malana", "lastName": "Weems", "homeAddress": "1689 13th st", "jobAddress": "100 Montgomery St" },
+            { "firstName": "Cleo", "lastName": "West", "homeAddress": "106 Fern St Apt 3", "jobAddress": "750 Battery St" },
+            { "firstName": "Latisha", "lastName": "White", "homeAddress": "600 Wilbur Ave Apt 2036", "jobAddress": "150 Spear St Ste 775" },
+            { "firstName": "Charles", "lastName": "Whitley", "homeAddress": "3052 Pleitner Ave", "jobAddress": "150 Spear St Ste 775" },
+            { "firstName": "Domariae", "lastName": "Williams", "homeAddress": "1030 Taylor Ave apt D", "jobAddress": "30 Maiden Ln" },
+            { "firstName": "Gary", "lastName": "Wilson", "homeAddress": "P.O. Box 330272", "jobAddress": "600 California St" },
+            { "firstName": "Abdulhalim", "lastName": "Wolfe", "homeAddress": "2912 Diamond St Apt 386", "jobAddress": "100 Montgomery St" },
+            { "firstName": "William", "lastName": "Wood", "homeAddress": "2087 30th Ave", "jobAddress": "115 Sansome St" },
+            { "firstName": "Aaron", "lastName": "Woodworth", "homeAddress": "1040 Stockton St Apt 47", "jobAddress": "130 Battery St" },
+            { "firstName": "Jesse", "lastName": "Wright", "homeAddress": "29039 Aztec Rd", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Cynthia", "lastName": "Yarbor", "homeAddress": "7911 Bancroft Ave", "jobAddress": "425 Market St" },
+            { "firstName": "Jimmy", "lastName": "Zaragoza", "homeAddress": "64 Turk St Apt 401", "jobAddress": "456 Montgomery St" },
+            { "firstName": "Scott", "lastName": "Zimels", "homeAddress": "2230 Geary Blvd Apt 10", "jobAddress": "170 Maiden Ln" },
+            { "firstName": "Enefiok", "lastName": "Akpan", "homeAddress": "22328 S Garden Ave Apt 0", "jobAddress": "555 12th St" },
+            { "firstName": "Getablot", "lastName": "Belayneh", "homeAddress": "1400 San Leandro Blvd Unit 406", "jobAddress": "1611 Telegraph ave" },
+            { "firstName": "Ayele", "lastName": "Beyene", "homeAddress": "378 Van Buren Ave Apt 201", "jobAddress": "475 14th St" },
+            { "firstName": "Angelique", "lastName": "Brown", "homeAddress": "385 14th St", "jobAddress": "475 14th St" },
+            { "firstName": "Joe", "lastName": "Brown", "homeAddress": "2010 Milvia St Unit 310", "jobAddress": "2001 Center St" },
+            { "firstName": "Marie", "lastName": "Brown", "homeAddress": "2342 Shattuck Ave Apt 909", "jobAddress": "32205 Union Lndg" },
+            { "firstName": "Manuel Jr", "lastName": "Calzada", "homeAddress": "1425 Harrison St Apt 122", "jobAddress": "1955 Broadway" },
+            { "firstName": "Krishan", "lastName": "Dutt", "homeAddress": "2523 Erskine Ln", "jobAddress": "6425 Christie Ave" },
+            { "firstName": "Loubna", "lastName": "Erreyahi", "homeAddress": "3301 Telegraph Ave Apt 305", "jobAddress": "555 12th St" },
+            { "firstName": "Darren", "lastName": "Flenoy", "homeAddress": "2915 N Texas St Apt 152", "jobAddress": "1611 Telegraph ave" },
+            { "firstName": "Jada", "lastName": "Fluker", "homeAddress": "1475 9th St", "jobAddress": "2000 Franklin St" },
+            { "firstName": "Solome", "lastName": "Hagos", "homeAddress": "1382 E 32nd St", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Jacqueline", "lastName": "Hammonds", "homeAddress": "2209 E 24th St Apt 1", "jobAddress": "1970 Broadway Ste 810" },
+            { "firstName": "Yonas", "lastName": "Hdru", "homeAddress": "3768 Piedmont Ave Apt B", "jobAddress": "300 Frank H Ogawa Plz" },
+            { "firstName": "Joseph", "lastName": "Henry", "homeAddress": "1530 Ellis St Apt 211", "jobAddress": "1750 Broadway" },
+            { "firstName": "Dawnn", "lastName": "Hills", "homeAddress": "2323 Broadway", "jobAddress": "1438 Webster St" },
+            { "firstName": "Rasheed", "lastName": "Johnson", "homeAddress": "631 Colorados Dr", "jobAddress": "5959 Shellmound Street" },
+            { "firstName": "Marian", "lastName": "McCullough", "homeAddress": "7886 Ney Ave Apt B", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Gwendolyn", "lastName": "McGregor", "homeAddress": "P.O. Box 814", "jobAddress": "80 Grand Ave" },
+            { "firstName": "Heather", "lastName": "Morris", "homeAddress": "5460 Bancroft Ave Apt 103", "jobAddress": "1300 Clay St" },
+            { "firstName": "Xavier", "lastName": "Newcomb", "homeAddress": "655 S Elmhurst Ave", "jobAddress": "2120 Broadway" },
+            { "firstName": "Chris", "lastName": "Nwadigo", "homeAddress": "745 E 11th St Apt 4", "jobAddress": "25500 Clawiter Rd" },
+            { "firstName": "Anita", "lastName": "Paul", "homeAddress": "770 Carlson Blvd Apt 3", "jobAddress": "555 12th St" },
+            { "firstName": "Jazmine", "lastName": "Reybol", "homeAddress": "330 Athol Ave", "jobAddress": "1970 Broadway Ste 810" },
+            { "firstName": "Larry", "lastName": "Robinson", "homeAddress": "3258 Lynde St", "jobAddress": "555 12th St" },
+            { "firstName": "Winston", "lastName": "Robinson", "homeAddress": "1916 8th Ave", "jobAddress": "1611 Telegraph Ave Fl 11" },
+            { "firstName": "Joseluis", "lastName": "Rodriguez", "homeAddress": "2812 Atwell Ave", "jobAddress": "2120 Broadway" },
+            { "firstName": "Bimal", "lastName": "Singh", "homeAddress": "3944 Kite Way", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Richard", "lastName": "Stewart", "homeAddress": "1399 Pacific Ave Apt 216", "jobAddress": "555 12th St" },
+            { "firstName": "Anayansi", "lastName": "Voltizano", "homeAddress": "1600 162nd Ave Apt 2", "jobAddress": "80 Grand Ave" },
+            { "firstName": "Jasymn", "lastName": "Williams", "homeAddress": "2415 Sunny Ln Apt 31", "jobAddress": "1340 Treat Blvd Ste 160" },
+            { "firstName": "Boris", "lastName": "Korentsvit", "homeAddress": "1025 Fillmore St Apt 9J", "jobAddress": "166 Geary Street" },
+            { "firstName": "Livinus", "lastName": "Asuzu", "homeAddress": "575 Orizaba Ave", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Moses", "lastName": "Kiarie", "homeAddress": "1675 Hays St Apt 116", "jobAddress": "55 Hawthorne St" },
+            { "firstName": "Lorenzo", "lastName": "Hawkins", "homeAddress": "34 Turk St Apt 550", "jobAddress": "360 Spear St" },
+            { "firstName": "Jameila", "lastName": "Allen", "homeAddress": "17449 Jerry Pl", "jobAddress": "25500 Clawiter Rd" },
+            { "firstName": "Shahid", "lastName": "Yousufzai", "homeAddress": "928 Canada Dr", "jobAddress": "1438 Webster St" },
+            { "firstName": "Nessrine", "lastName": "Kasmi", "homeAddress": "776 Geary St Apt 502", "jobAddress": "1280 Laguna St" },
+            { "firstName": "Nicholas", "lastName": "Rizzo", "homeAddress": "1524 Wainwright Ave", "jobAddress": "1955 Broadway" },
+            { "firstName": "Vicky", "lastName": "Jimenez", "homeAddress": "148 2nd St", "jobAddress": "1955 Broadway" },
+            { "firstName": "Krystyna", "lastName": "Robinson", "homeAddress": "1311 Webster St Apt E300", "jobAddress": "425 Market St" },
+            { "firstName": "Roel", "lastName": "Rada", "homeAddress": "27836 Ormond Ave", "jobAddress": "420 23rd St" },
+            { "firstName": "Justin", "lastName": "Chandra", "homeAddress": "249 Boardwalk Ave Apt F", "jobAddress": "420 23rd St" },
+            { "firstName": "Robert", "lastName": "Gentry", "homeAddress": "9445 Dunbar Dr", "jobAddress": "555 12th St" },
+            { "firstName": "Jerome", "lastName": "Guion", "homeAddress": "556 Jones St # 702", "jobAddress": "500 Howard St" },
+            { "firstName": "Leandre", "lastName": "Aubrey", "homeAddress": "1333 N Camino Alto Unit 157", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Taliyah", "lastName": "Cole", "homeAddress": "1600 Clay St", "jobAddress": "500 Pine St" },
+            { "firstName": "Chandra", "lastName": "Gurung", "homeAddress": "1177 Market St Apt 1005", "jobAddress": "500 Howard St" },
+            { "firstName": "Faisal", "lastName": "Alnumi", "homeAddress": "2050 Harrington Ave Apt 6", "jobAddress": "500 Howard St" },
+            { "firstName": "Augusto", "lastName": "Alimorong", "homeAddress": "1700 El Camino Real Spc 20-8", "jobAddress": "500 Howard St" },
+            { "firstName": "Terrance", "lastName": "Mitchell", "homeAddress": "1419 7th St Apt 3", "jobAddress": "115 Sansome St" },
+            { "firstName": "Puneet", "lastName": "Abbi", "homeAddress": "27217 Sleepy Hollow Ave S", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Michael", "lastName": "Gibson", "homeAddress": "229 Cambridge Ave", "jobAddress": "420 23rd St" },
+            { "firstName": "Ammar", "lastName": "Saleh", "homeAddress": "1106 Bush St Apt 206", "jobAddress": "633 Folsom St Ste 100" },
+            { "firstName": "Martin", "lastName": "De Guzman", "homeAddress": "5455 Fiesta Rd", "jobAddress": "100 Montgomery St" },
+            { "firstName": "Abderrahman", "lastName": "Chakib", "homeAddress": "16 Camelback Ct", "jobAddress": "750 Battery St" },
+            { "firstName": "Maheswor", "lastName": "Sodemba", "homeAddress": "830 Eddy St Apt 406", "jobAddress": "500 Howard St" },
+            { "firstName": "Lorenzo", "lastName": "Hudson", "homeAddress": "624 York St", "jobAddress": "240 Stockton St" },
+            { "firstName": "Suze", "lastName": "Azor", "homeAddress": "2080 23rd St Unit 6542", "jobAddress": "1970 Broadway Ste 810" },
+            { "firstName": "Anton", "lastName": "Shankle", "homeAddress": "2830 19th St", "jobAddress": "2000 Franklin St" },
+            { "firstName": "Mario", "lastName": "Cabral", "homeAddress": "2155 Mission St Apt 206", "jobAddress": "420 23rd St" },
+            { "firstName": "David", "lastName": "Peterson", "homeAddress": "3571 66th Ave Apt 7", "jobAddress": "1955 Broadway" },
+            { "firstName": "Yolanda", "lastName": "Perez", "homeAddress": "4 Beechwood Ct", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Kehinde", "lastName": "Faniran", "homeAddress": "894 Davis St Apt 101", "jobAddress": "555 12th St" },
+            { "firstName": "Jose", "lastName": "Sanchez", "homeAddress": "410 S 34th St Apt C", "jobAddress": "111 Pine St" },
+            { "firstName": "Gerald", "lastName": "Ugwumba", "homeAddress": "2125 92nd Ave Apt 108", "jobAddress": "425 Market St" },
+            { "firstName": "Mark", "lastName": "Owens", "homeAddress": "117 Seafarer Ct", "jobAddress": "2000 Franklin St" },
+            { "firstName": "Winfred", "lastName": "Agboka", "homeAddress": "618 14th St Apt 35", "jobAddress": "1955 Broadway" },
+            { "firstName": "Andrew", "lastName": "Olivarez", "homeAddress": "1080 Stanford Ave Apt 5", "jobAddress": "300 Kansas St" },
+            { "firstName": "Siberria", "lastName": "Briscoe", "homeAddress": "7940 Ney Ave", "jobAddress": "1955 Broadway" },
+            { "firstName": "Marcos", "lastName": "Garcia", "homeAddress": "1498 Underwood Ave", "jobAddress": "300 Kansas St" },
+            { "firstName": "Jude", "lastName": "Okoli", "homeAddress": "4424 Folsom Dr", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Mercedez", "lastName": "Martinez", "homeAddress": "4733 Fleming Ave A", "jobAddress": "1955 Broadway" },
+            { "firstName": "LaSheon", "lastName": "Scott", "homeAddress": "2535 74th Ave", "jobAddress": "1611 Telegraph ave" },
+            { "firstName": "Ayiaz", "lastName": "Ali", "homeAddress": "24952 Townsend Ave", "jobAddress": "25500 Clawiter Rd" },
+            { "firstName": "Emmanuel", "lastName": "Iradukunda", "homeAddress": "2330 Webster St Apt 348", "jobAddress": "1719 Franklin St" },
+            { "firstName": "Antonio", "lastName": "Jenkins", "homeAddress": "727 Buena Vista Ave Apt 238", "jobAddress": "25500 Clawiter Rd" },
+            { "firstName": "Claudia", "lastName": "Del Rio", "homeAddress": "1467 Tucker St", "jobAddress": "25500 Clawiter Rd" },
+            { "firstName": "Lynze", "lastName": "Scott", "homeAddress": "344 13th St Unit 511", "jobAddress": "71 Stevenson St Ste 1440" },
+            { "firstName": "Antonio", "lastName": "Cavaness", "homeAddress": "24900 Santa Clara St Apt 2", "jobAddress": "1719 Franklin St" },
+            { "firstName": "Michael", "lastName": "Legaspi", "homeAddress": "1085 Notre Dame Cir", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Adham", "lastName": "Shaef", "homeAddress": "111 Jones St Apt 504", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Nysae", "lastName": "Cedeno", "homeAddress": "712 Oak St", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Krishna", "lastName": "Budha", "homeAddress": "125 Coronado Ave Apt 319", "jobAddress": "599 Skyline Blvd" },
+            { "firstName": "Don", "lastName": "Osuna", "homeAddress": "46 Morningside Dr", "jobAddress": "456 Montgomery St" },
+            { "firstName": "Antoni", "lastName": "Buhay", "homeAddress": "89 Leese St", "jobAddress": "420 23rd St" },
+            { "firstName": "Monty", "lastName": "Kaho", "homeAddress": "4274 Deep Creek Rd", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Xzavier", "lastName": "Middleton", "homeAddress": "7251 Brentwood Blvd Apt 238", "jobAddress": "181 Fremont St" },
+            { "firstName": "Jewell", "lastName": "Fix", "homeAddress": "1426 3rd Ave Apt 3", "jobAddress": "201 Mission St" },
+            { "firstName": "Melaysia", "lastName": "Horne", "homeAddress": "59 Villa Cir", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Tracy", "lastName": "Bonnah", "homeAddress": "601 William St Apt 127", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Isaiah", "lastName": "Allen", "homeAddress": "120 Cataline Ave", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Bikash", "lastName": "Dhungana", "homeAddress": "1830 Alemany Blvd Apt 208", "jobAddress": "181 Fremont St" },
+            { "firstName": "Gamal", "lastName": "Ahmed", "homeAddress": "3706 San Pablo Ave Unit 525", "jobAddress": "5801 Christie Avenue" },
+            { "firstName": "Jumaane", "lastName": "Garrett", "homeAddress": "5618 Boulder Canyon Dr", "jobAddress": "1955 Broadway" },
+            { "firstName": "Ruth", "lastName": "Dock", "homeAddress": "2550 Hilborn Rd Apt 290", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Annastia", "lastName": "Singleton", "homeAddress": "411 29th St Unit 321", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Rochak", "lastName": "Kadel", "homeAddress": "525 Leavenworth St Apt 6", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Ahmad", "lastName": "Falley", "homeAddress": "5371 Foothill Blvd", "jobAddress": "633 Folsom St Ste 100" },
+            { "firstName": "Williams", "lastName": "Chaninomi", "homeAddress": "745 E 11th St Apt 06", "jobAddress": "633 Folsom St Ste 100" },
+            { "firstName": "Wossenu", "lastName": "Adesse", "homeAddress": "460 Ellis St Apt 41", "jobAddress": "633 Folsom St Ste 100" },
+            { "firstName": "Mason", "lastName": "Gilbert", "homeAddress": "157 Paradise Dr Apt 2", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Yekini", "lastName": "Farogbe", "homeAddress": "1122 4th Ave", "jobAddress": "750 Battery St" },
+            { "firstName": "Rudy", "lastName": "Juarez", "homeAddress": "17307 Frances Viia", "jobAddress": "1100 San Leandro Blvd" },
+            { "firstName": "Esther", "lastName": "Hannam", "homeAddress": "1521 Denton Ave", "jobAddress": "32205 Union Lndg" },
+            { "firstName": "Ignacio", "lastName": "Valdovinos", "homeAddress": "9871 Plymouth St", "jobAddress": "3000 E 9th St" },
+            { "firstName": "Evelyn", "lastName": "Bellinger", "homeAddress": "131 Catalina St Unit 105", "jobAddress": "32205 Union Lndg" },
+            { "firstName": "Otamejayen", "lastName": "Anidi", "homeAddress": "1965 Desert Cir Apt 5", "jobAddress": "3000 E 9th St" },
+            { "firstName": "John", "lastName": "Hedges", "homeAddress": "32600 Almaden Blvd Apt 127", "jobAddress": "32205 Union Lndg" },
+            { "firstName": "William", "lastName": "Satterfield", "homeAddress": "1711 94th ave", "jobAddress": "3000 E 9th St" },
+            { "firstName": "Enkhzaya", "lastName": "Oldokh", "homeAddress": "1401 Felton St", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Carlos", "lastName": "Zepeda", "homeAddress": "1734 Bridge Ave", "jobAddress": "3000 E 9th St" },
+            { "firstName": "Delfonte", "lastName": "Williams", "homeAddress": "1410 3rd Ave", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Brittany", "lastName": "Small", "homeAddress": "670 18th St Apt 3", "jobAddress": "80 Grand Ave" },
+            { "firstName": "Rommel", "lastName": "Calvert", "homeAddress": "904 Corbett Ave Apt 3", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Jose", "lastName": "Moran Sanchez", "homeAddress": "1301 67th St Apt A", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Stepheno", "lastName": "Jackson", "homeAddress": "1512 89th Ave", "jobAddress": "555 12th St" },
+            { "firstName": "Jean-Paul", "lastName": "Ngilbus", "homeAddress": "3123 Cuthbert Ave", "jobAddress": "220 Montgomery St" },
+            { "firstName": "John", "lastName": "Perkyns", "homeAddress": "2361 Mission ST", "jobAddress": "717 Market St" },
+            { "firstName": "Stephen", "lastName": "Alleyne", "homeAddress": "1479 Fruitvale Ave Apt 16", "jobAddress": "220 Montgomery St" },
+            { "firstName": "Liliana", "lastName": "Prieto", "homeAddress": "1107 Carroll Ave", "jobAddress": "425 Market St" },
+            { "firstName": "Shayan", "lastName": "Khan", "homeAddress": "502 Sirina Ct", "jobAddress": "633 Folsom St Ste 100" },
+            { "firstName": "Apithany", "lastName": "Hayes", "homeAddress": "3404 Harper St Apt A", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Nasreldin", "lastName": "Mohammed", "homeAddress": "1273 106th Ave", "jobAddress": "378 Embacadero" },
+            { "firstName": "Marcus", "lastName": "Lewis", "homeAddress": "1548 Quesada Ave", "jobAddress": "201 Mission St" },
+            { "firstName": "Monicia", "lastName": "Smith", "homeAddress": "750 Mandela Pkwy Apt A244", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Yoro", "lastName": "Sow", "homeAddress": "287 Euclid Ave", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Tod", "lastName": "Tatney", "homeAddress": "1575 Palou Ave", "jobAddress": "30 Grant Ave" },
+            { "firstName": "James", "lastName": "Townsend", "homeAddress": "21109 Gary Dr Apt 211", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Robyn", "lastName": "Glasco", "homeAddress": "7708 Ney Ave Apt A", "jobAddress": "300 Frank H Ogawa Plz" },
+            { "firstName": "Michael", "lastName": "Ferreira", "homeAddress": "2772 Simas Ave", "jobAddress": "300 Frank H Ogawa Plz" },
+            { "firstName": "David", "lastName": "Ferreira", "homeAddress": "2772 Simas Ave", "jobAddress": "300 Frank H Ogawa Plz" },
+            { "firstName": "Edwards", "lastName": "Sparks", "homeAddress": "2710 May Rd", "jobAddress": "300 Frank H Ogawa Plz" },
+            { "firstName": "Dominic", "lastName": "Thorn", "homeAddress": "743 Polk St Apt 201", "jobAddress": "425 Market St" },
+            { "firstName": "Kari", "lastName": "McCoy", "homeAddress": "9301 Thermal St", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Honesty", "lastName": "Morris", "homeAddress": "2442 64th Ave", "jobAddress": "25500 Clawiter Rd" },
+            { "firstName": "Davina", "lastName": "Monte", "homeAddress": "1327 Ocean Ave", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Jaleesa", "lastName": "Perry", "homeAddress": "301 Bergedo Dr", "jobAddress": "3129 Corporate Pl" },
+            { "firstName": "Javontae", "lastName": "Roberts", "homeAddress": "527 Buena Vista Ave Apt 203", "jobAddress": "5801 Christie Avenue" },
+            { "firstName": "Max Ray", "lastName": "Garibay Jr", "homeAddress": "225 Linden Ave", "jobAddress": "222 Kearny St" },
+            { "firstName": "Emmanuel", "lastName": "Amattah", "homeAddress": "2412 Greentree Ct", "jobAddress": "6425 Christie Ave" },
+            { "firstName": "Alex", "lastName": "Aguilar-Loza", "homeAddress": "3050 Davis St", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Joseph", "lastName": "Ndiakon", "homeAddress": "2448 Damuth St Apt C", "jobAddress": "1922 Walnust Street" },
+            { "firstName": "Stasha", "lastName": "Thomas", "homeAddress": "24268 Silva Ave 14", "jobAddress": "300 Frank H Ogawa Plz" },
+            { "firstName": "Jazlyn", "lastName": "Anderson", "homeAddress": "1540 Fred Jackson Way Unit 201", "jobAddress": "1922 Walnust Street" },
+            { "firstName": "Christina", "lastName": "Rimer", "homeAddress": "4041 Galenez Way", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "David", "lastName": "Burney", "homeAddress": "1764 Revere Ave", "jobAddress": "120 Kearny St" },
+            { "firstName": "Brandon", "lastName": "Burns", "homeAddress": "9308 Bancroft Ave", "jobAddress": "7677 Oakport St" },
+            { "firstName": "Jayson", "lastName": "Garnett", "homeAddress": "PO Box 170434", "jobAddress": "2801 Shadelands Dr" },
+            { "firstName": "Thurmal", "lastName": "Felise", "homeAddress": "1131 24th St Apt 204", "jobAddress": "555 12th St" },
+            { "firstName": "Cellouse", "lastName": "Ham", "homeAddress": "1908 65th Ave Apt A", "jobAddress": "1035 Market St" },
+            { "firstName": "Antonio", "lastName": "Edwards", "homeAddress": "907 Campbell Village Ct", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Grover", "lastName": "Wayne III", "homeAddress": "8603 Hillside St Apt 214", "jobAddress": "2000 Franklin St" },
+            { "firstName": "Joshua", "lastName": "Kofoworola", "homeAddress": "1720 12th Ave Apt 213", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Jose", "lastName": "Ruiz Valdez", "homeAddress": "7336 Locke Rd", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Mahmudi", "lastName": "Hussein", "homeAddress": "4304 Potrero Ave Apt 24", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Angel", "lastName": "Diamond", "homeAddress": "2923 West St", "jobAddress": "3129 Corporate Pl" },
+            { "firstName": "Josue", "lastName": "Vasquez", "homeAddress": "455 Eddy Street", "jobAddress": "2801 Shadelands Dr" },
+            { "firstName": "Michael", "lastName": "Ziganti", "homeAddress": "422 22nd Ave Apt 3", "jobAddress": "170 Maiden Ln" },
+            { "firstName": "Rupesh", "lastName": "Dutaraj", "homeAddress": "860 Geary St Apt 402", "jobAddress": "500 Howard St" },
+            { "firstName": "Tylee", "lastName": "Cockerham", "homeAddress": "6401 Shellmound St Apt 8419", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Claudia", "lastName": "Miranda", "homeAddress": "981 Juniper Ct", "jobAddress": "2801 Shadelands Dr" },
+            { "firstName": "Ernesto", "lastName": "Delgado", "homeAddress": "15993 Saint Johns Dr", "jobAddress": "5801 Christie Avenue" },
+            { "firstName": "Sarah", "lastName": "Taamai", "homeAddress": "1101 Connecticut St Apt 404", "jobAddress": "500 Howard St" },
+            { "firstName": "Jamal", "lastName": "Malih", "homeAddress": "161 Crestwood Dr Apt 10", "jobAddress": "1128 Market St" },
+            { "firstName": "David", "lastName": "Peraza", "homeAddress": "2229 E Leland Rd Apt 141", "jobAddress": "456 Montgomery St" },
+            { "firstName": "Tyrone", "lastName": "Thomas", "homeAddress": "867 Island Dr", "jobAddress": "725 85th Ave" },
+            { "firstName": "Willie", "lastName": "August", "homeAddress": "1936 16th Ave Apt 2", "jobAddress": "725 85th Ave" },
+            { "firstName": "Christopher", "lastName": "Scott", "homeAddress": "16385 E 14th St Apt 2202", "jobAddress": "725 85th Ave" },
+            { "firstName": "Jimmy", "lastName": "Pastor", "homeAddress": "890 Davis St Apt 203", "jobAddress": "725 85th Ave" },
+            { "firstName": "Erika", "lastName": "Mendoza Angel", "homeAddress": "1339 Rhode Island St", "jobAddress": "181 Fremont St" },
+            { "firstName": "Roham", "lastName": "Menghesha", "homeAddress": "407 Fairmount Ave Apt 305", "jobAddress": "500 Howard St" },
+            { "firstName": "Janaina", "lastName": "Galdino Da Silva", "homeAddress": "180 2nd St Apt B218", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Yobel", "lastName": "Berhe", "homeAddress": "3502 Laguna Ave", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Roman", "lastName": "Mitchell", "homeAddress": "56 Mason St", "jobAddress": "180 Montgomery St Ste 1650" },
+            { "firstName": "Tracy", "lastName": "La Cour", "homeAddress": "1539 Shafter Ave", "jobAddress": "101 Mission St" },
+            { "firstName": "Cassandra", "lastName": "Campbell", "homeAddress": "50 Dunedin Dr", "jobAddress": "180 Montgomery St Ste 1650" },
+            { "firstName": "Peter", "lastName": "Furrer", "homeAddress": "925 Fell St Apt 4", "jobAddress": "180 Montgomery St Ste 1650" },
+            { "firstName": "Laneah", "lastName": "Allen", "homeAddress": "1514 Oregon St Apt F", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Matthew James", "lastName": "Gamban", "homeAddress": "138 Pope St", "jobAddress": "180 Montgomery St Ste 1650" },
+            { "firstName": "James", "lastName": "Barboza", "homeAddress": "24050 Silva Ave Apt 64", "jobAddress": "180 Montgomery St Ste 1650" },
+            { "firstName": "Timothy", "lastName": "Paliani", "homeAddress": "1390 Market St Apt 1422", "jobAddress": "110 Sutter St" },
+            { "firstName": "Nixon", "lastName": "Matignas", "homeAddress": "16564 Ehle St", "jobAddress": "180 Montgomery St Ste 1650" },
+            { "firstName": "Desmond", "lastName": "Bissessar", "homeAddress": "238 Baltimore Way", "jobAddress": "110 Sutter St" },
+            { "firstName": "Lionell", "lastName": "Reed", "homeAddress": "7570 PO Box", "jobAddress": "32205 Union Lndg" },
+            { "firstName": "Devante", "lastName": "Smith", "homeAddress": "160 Appleton Ave", "jobAddress": "5959 Shellmound Street" },
+            { "firstName": "Maya", "lastName": "Boyakins", "homeAddress": "1006 16th St", "jobAddress": "5959 Shellmound Street" },
+            { "firstName": "Jhenearo", "lastName": "Hemmingway", "homeAddress": "1124 65th Ave Apt A", "jobAddress": "5959 Shellmound Street" },
+            { "firstName": "Aniyah", "lastName": "Bardell", "homeAddress": "1228 West St", "jobAddress": "5959 Shellmound Street" },
+            { "firstName": "Elisha", "lastName": "Carlisle", "homeAddress": "19 Deering Ct", "jobAddress": "1955 Broadway" },
+            { "firstName": "Salma", "lastName": "Mazzour", "homeAddress": "530 Francisco Street", "jobAddress": "400 Paul Ave" },
+            { "firstName": "Ashanti", "lastName": "Griffin", "homeAddress": "2819 Foothill Ave", "jobAddress": "425 California St" },
+            { "firstName": "Anthony", "lastName": "Foster", "homeAddress": "6401 Gray Rock Rd", "jobAddress": "3000 E 9th St" },
+            { "firstName": "Tekila", "lastName": "Johnson", "homeAddress": "71 10th St Apt 210", "jobAddress": "1955 Broadway" },
+            { "firstName": "Rashima", "lastName": "McKelvy", "homeAddress": "21701 Foothill Blvd Apt 227", "jobAddress": "555 12th St" },
+            { "firstName": "Bernard", "lastName": "Conaway", "homeAddress": "2200 Sycamore Dr Apt G-235", "jobAddress": "201 Mission St" },
+            { "firstName": "Jean", "lastName": "Lubin", "homeAddress": "611 Nevin Ave Apt A", "jobAddress": "5959 Shellmound Street" },
+            { "firstName": "Danaee", "lastName": "Diaz", "homeAddress": "269 24th St Unit 810", "jobAddress": "2000 Franklin St" },
+            { "firstName": "Victor", "lastName": "Elizalde", "homeAddress": "639 Geary St Apt 1005", "jobAddress": "120 Kearny St" },
+            { "firstName": "Tyrone", "lastName": "Spivey", "homeAddress": "966 36th St Apt 4", "jobAddress": "6425 Christie Ave" },
+            { "firstName": "Sequan", "lastName": "Edmonds", "homeAddress": "3246 E 27th St Apt 5", "jobAddress": "5959 Shellmound Street" },
+            { "firstName": "Gonzalo", "lastName": "Alviso", "homeAddress": "1938 83rd Ave Apt D", "jobAddress": "25500 Clawiter Rd" },
+            { "firstName": "Emmanuel", "lastName": "Perez Jr", "homeAddress": "1355 Shafter Ave", "jobAddress": "420 23rd St" },
+            { "firstName": "Eric", "lastName": "Johnson", "homeAddress": "1930 Folsom St Apt A", "jobAddress": "601 California St" },
+            { "firstName": "Gresha", "lastName": "Brown", "homeAddress": "2474 26th Ave Apt 2", "jobAddress": "400 Paul Ave" },
+            { "firstName": "Aliyah", "lastName": "Barrett", "homeAddress": "2316 Bay Meadows Cir", "jobAddress": "1611 Telegraph ave" },
+            { "firstName": "Erica", "lastName": "Cazares", "homeAddress": "1515 25th Ave", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Nathaniel", "lastName": "Weaver", "homeAddress": "169 Santa Rosa Ave Apt 101", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Isaac", "lastName": "Balogun", "homeAddress": "2314 84th Ave", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Alexandra", "lastName": "Evans", "homeAddress": "417 S 38th St", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Bruce", "lastName": "Miller", "homeAddress": "1060 Howard St", "jobAddress": "181 Fremont St" },
+            { "firstName": "Thomas", "lastName": "Dewitt", "homeAddress": "426 S 49th St", "jobAddress": "201 Mission St" },
+            { "firstName": "Maria", "lastName": "Preciado", "homeAddress": "1 Saint Francis Place 706", "jobAddress": "500 Howard St" },
+            { "firstName": "Zachary", "lastName": "Taylor", "homeAddress": "1202 Via Lucas", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Julian", "lastName": "Roberts", "homeAddress": "75 Arch St Apt 212", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Mitrail", "lastName": "Pinkney", "homeAddress": "6128 Bancroft Ave", "jobAddress": "25500 Clawiter Rd" },
+            { "firstName": "Gerald Cedric", "lastName": "Boyakins", "homeAddress": "460 Buena Vista Ave Apt 205", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Sandy", "lastName": "Sims", "homeAddress": "2114 10th St", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Agustin", "lastName": "Sison", "homeAddress": "275 Morton Dr", "jobAddress": "181 Fremont St" },
+            { "firstName": "Trent", "lastName": "Choyce", "homeAddress": "144 Grand Ave Apt 36", "jobAddress": "420 23rd St" },
+            { "firstName": "Jay", "lastName": "Cowen", "homeAddress": "424 Ellis St", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Jiacheng", "lastName": "Wen", "homeAddress": "5536a California St", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Julie", "lastName": "Sand", "homeAddress": "1236 Rhode Island", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Tierren", "lastName": "Anderson", "homeAddress": "883 Athens Ave", "jobAddress": "181 Fremont St" },
+            { "firstName": "Dasheana", "lastName": "Davis", "homeAddress": "1400 Fairway Dr", "jobAddress": "5959 Shellmound Street" },
+            { "firstName": "Imani Neveah", "lastName": "Jones", "homeAddress": "605 Berk Ave Apt 7", "jobAddress": "1100 San Leandro Blvd" },
+            { "firstName": "Tamika", "lastName": "Freeman", "homeAddress": "7206 Orral St", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Irie", "lastName": "Frayer", "homeAddress": "203 Diamond Cove Ter", "jobAddress": "633 Folsom St Ste 100" },
+            { "firstName": "Matt", "lastName": "Menacho", "homeAddress": "278 Allison St", "jobAddress": "181 Fremont St" },
+            { "firstName": "Aireyn", "lastName": "Taylor-Hunter", "homeAddress": "915 52nd St", "jobAddress": "101 S 200 E" },
+            { "firstName": "Luiz", "lastName": "Ortiz", "homeAddress": "2112 Marina Blvd", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Brandon", "lastName": "Monteiro", "homeAddress": "55 Valle Vista Ave Apt 708", "jobAddress": "456 Montgomery St" },
+            { "firstName": "Peter III", "lastName": "Relles", "homeAddress": "1278 Market St # 203", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Jamel", "lastName": "Aljamal", "homeAddress": "2015 19th Ave", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Beverly", "lastName": "Johnson", "homeAddress": "1426 3rd Ave Apt 3", "jobAddress": "30 Grant Ave" },
+            { "firstName": "Jalen", "lastName": "Esteen", "homeAddress": "16230 Maubert Ave", "jobAddress": "1200 Van Ness Ave" },
+            { "firstName": "Stanley", "lastName": "Moumolua", "homeAddress": "2510 West St", "jobAddress": "115 Sansome St" },
+            { "firstName": "Muhammad Uzair", "lastName": "Mumtaz", "homeAddress": "638 Franklin Ln", "jobAddress": "599 Skyline Blvd" },
+            { "firstName": "Gremelt", "lastName": "Balladares Garcia", "homeAddress": "676 Brunswick St", "jobAddress": "201 Mission St" },
+            { "firstName": "Jahnay", "lastName": "James", "homeAddress": "2755 San Bruno Ave Unit 347074", "jobAddress": "600 California St" },
+            { "firstName": "Issack", "lastName": "Jones", "homeAddress": "2425 Valdez Street", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Erielle", "lastName": "Hammonds", "homeAddress": "1126 E Leland Rd Apt 269", "jobAddress": "181 Fremont St" },
+            { "firstName": "Manar", "lastName": "Qaadoun", "homeAddress": "729 Jones St Apt 407", "jobAddress": "1200 Van Ness Ave" },
+            { "firstName": "Inam", "lastName": "Ullah", "homeAddress": "499 Violet Rd", "jobAddress": "2801 Shadelands Dr" },
+            { "firstName": "Micheal", "lastName": "Jones", "homeAddress": "765 Ofarrell St Apt 26", "jobAddress": "1 Kearny St" },
+            { "firstName": "Ruth", "lastName": "Mendoza", "homeAddress": "1063 47th St Unit C", "jobAddress": "601 California St" },
+            { "firstName": "Alan", "lastName": "Zer", "homeAddress": "440 Hyde St Apt 6", "jobAddress": "101 Mission St" },
+            { "firstName": "Isai", "lastName": "Torres", "homeAddress": "3818 Roosevelt Ave", "jobAddress": "425 Market St" },
+            { "firstName": "Kenneth", "lastName": "McAllister", "homeAddress": "1636 Oregon St", "jobAddress": "1200 Van Ness Ave" },
+            { "firstName": "Caroline", "lastName": "Mwanguhya", "homeAddress": "6706 MacArthur Blvd Apt 5", "jobAddress": "100 Montgomery St" },
+            { "firstName": "Kaia", "lastName": "Hines", "homeAddress": "1608 Thomas Ave", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Basil", "lastName": "Martin", "homeAddress": "9315 Vista Ct", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Cody", "lastName": "Jolley-Branham", "homeAddress": "2210 Highlands Rd", "jobAddress": "400 Paul Ave" },
+            { "firstName": "Hayat", "lastName": "Radi", "homeAddress": "737 Bush St Unit 507", "jobAddress": "1280 Laguna St" },
+            { "firstName": "Kahari", "lastName": "Morgan", "homeAddress": "1203 Lakeview Cir", "jobAddress": "2801 Shadelands Dr" },
+            { "firstName": "Itishia", "lastName": "Hunt", "homeAddress": "1917 Grande Circle", "jobAddress": "400 Paul Ave" },
+            { "firstName": "Autumn", "lastName": "Spikes", "homeAddress": "198 Crolls Garden Ct", "jobAddress": "3129 Corporate Pl" },
+            { "firstName": "Shawn", "lastName": "Pierson", "homeAddress": "5627 Telegraph Ave", "jobAddress": "120 Kearny St" },
+            { "firstName": "Nikita", "lastName": "Smith", "homeAddress": "434 E 17th St Apt 114", "jobAddress": "300 Frank H Ogawa Plz" },
+            { "firstName": "Kd", "lastName": "Sibley", "homeAddress": "1743 12th Ave Apt D", "jobAddress": "1970 Broadway Ste 840" },
+            { "firstName": "Delvon", "lastName": "Emerson", "homeAddress": "1246 77th Ave", "jobAddress": "2801 Shadelands Dr" },
+            { "firstName": "Tasajanae", "lastName": "Madkins", "homeAddress": "621 23rd St Apt 1", "jobAddress": "1955 Broadway" },
+            { "firstName": "Ericka", "lastName": "Foster", "homeAddress": "2121 Wood St Apt 203", "jobAddress": "1970 Broadway Ste 810" },
+            { "firstName": "Ashley", "lastName": "Ramos", "homeAddress": "1515 Webster St", "jobAddress": "1970 Broadway Ste 810" },
+            { "firstName": "Sparkle", "lastName": "Edwards", "homeAddress": "2900 Pullman Ave Apt 132", "jobAddress": "300 Frank H Ogawa Plz" },
+            { "firstName": "Simranpal", "lastName": "Singh", "homeAddress": "3550 Carter Drive", "jobAddress": "1 La Avanzada St" },
+            { "firstName": "Tiffany", "lastName": "Chang", "homeAddress": "39 Sargent St", "jobAddress": "750 Battery St" },
+            { "firstName": "Deisy", "lastName": "Martinez Fernandez", "homeAddress": "765 Geary Street", "jobAddress": "425 Market St" },
+            { "firstName": "Kenyada", "lastName": "Dismuke", "homeAddress": "9400 International Blvd", "jobAddress": "180 Montgomery St Ste 700" },
+            { "firstName": "Melvin", "lastName": "Price", "homeAddress": "981 Mission St", "jobAddress": "181 Fremont St" },
+            { "firstName": "Jychelle", "lastName": "George", "homeAddress": "2201 San Jose Drive", "jobAddress": "1400 Geary Blvd" },
+            { "firstName": "Marlow", "lastName": "Lee", "homeAddress": "1406 Seminary Ave Apt A", "jobAddress": "3100 San Pablo Ave" },
+            { "firstName": "Roberto", "lastName": "Avalos", "homeAddress": "2736 Mission St Apt 1", "jobAddress": "210 Post St" }
+        ];
+
+        // --- MAP INITIALIZATION & LOGIC --- //
+        let mapInitialized = false;
+
+        const relieverColors = {
+            "Adham Shaef": "#8e44ad",    // Purple
+            "Apithany Hayes": "#27ae60", // Green
+            "Eli Walin": "#2980b9",      // Blue
+            "Imran Anwar": "#f39c12",    // Orange
+            "Melaysia Horn": "#c0392b", // Red
+            "Yolanda Perez": "#00bcd4"   // Cyan
+        };
+
+        function initializeMapApplication() {
+            if (mapInitialized) return;
+
+            const map = L.map('map').setView([37.7749, -122.4194], 13);
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+
+            const allSitesLayer = L.layerGroup().addTo(map);
+            const routeLayer = L.layerGroup().addTo(map);
+            const officerLayer = L.layerGroup().addTo(map);
+
+            const managerLegend = document.getElementById('manager-legend-container');
+            const reliefLegend = document.getElementById('relief-legend-container');
+
+            const allSitesList = Object.values(sites).flat();
+
+            function findSiteByAddress(address) {
+                const normalizedSearch = address.toLowerCase().trim();
+                let foundSite = allSitesList.find(site => site.address.toLowerCase().trim().startsWith(normalizedSearch));
+                if (!foundSite) {
+                    foundSite = allSitesList.find(site => site.name.toLowerCase().includes(normalizedSearch));
+                }
+                return foundSite;
+            }
+            
+            function createColoredIcon(color, options = {}) {
+                const { opacity = 1.0, scale = 1.0 } = options;
+                const size = 32 * scale;
+                const iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="${size}px" height="${size}px" style="opacity: ${opacity}; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>`;
+                return L.divIcon({ html: iconHtml, className: '', iconSize: [size, size], iconAnchor: [size / 2, size], popupAnchor: [0, -size] });
+            }
+
+            function createHomeIcon() {
+                const iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6b7280" width="30px" height="30px" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`;
+                return L.divIcon({
+                    html: iconHtml,
+                    className: '',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30],
+                    popupAnchor: [0, -30]
+                });
+            }
+            
+            function displayAllSites() {
+                allSitesLayer.clearLayers();
+                routeLayer.clearLayers();
+                officerLayer.clearLayers();
+                managerLegend.style.opacity = 1;
+                reliefLegend.classList.add('hidden');
+                Object.entries(sites).forEach(([manager, locations]) => {
+                    const color = managerColors[manager] || '#3388ff';
+                    const icon = createColoredIcon(color);
+                    locations.forEach(site => {
+                        const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
+                        marker.bindPopup(`<b>${site.name}</b><br>${site.address}<br><small>Manager: ${manager}</small>`);
+                    });
+                });
+            }
+
+            function displayOnlyReliefSites() {
+                routeLayer.clearLayers();
+                allSitesLayer.clearLayers();
+                officerLayer.clearLayers();
+                managerLegend.style.opacity = 0;
+                reliefLegend.classList.remove('hidden');
+
+                const reliefLegendList = document.getElementById('relief-legend-list');
+                reliefLegendList.innerHTML = '';
+                Object.keys(relieverColors).sort().forEach(relieverName => {
+                    const color = relieverColors[relieverName];
+                    const legendItem = document.createElement('div');
+                    legendItem.className = 'flex items-center space-x-3 animate-slide-in-up';
+                    legendItem.style.animationDelay = `${Object.keys(relieverColors).sort().indexOf(relieverName) * 50}ms`;
+                    legendItem.innerHTML = `
+                        <div class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: ${color};"></div>
+                        <span class="text-sm text-gray-200">${relieverName}</span>
+                    `;
+                    reliefLegendList.appendChild(legendItem);
+                });
+
+                const siteToRelieversMap = new Map();
+                Object.entries(breakReliefs).forEach(([relieverName, relief]) => {
+                    relief.schedule.forEach(item => {
+                        if (!item.isBreak) {
+                            const site = findSiteByAddress(item.locationName);
+                            if (site) {
+                                if (!siteToRelieversMap.has(site.name)) {
+                                    siteToRelieversMap.set(site.name, { site: site, relievers: new Set() });
+                                }
+                                siteToRelieversMap.get(site.name).relievers.add(relieverName);
+                            }
+                        }
+                    });
+                });
+
+                const reliefBounds = [];
+                siteToRelieversMap.forEach(({ site, relievers }) => {
+                    const relieverList = Array.from(relievers);
+                    const color = relieverColors[relieverList[0]] || '#3388ff';
+                    const popupText = `Reliever: ${relieverList.join(', ')}`;
+
+                    const icon = createColoredIcon(color, { scale: 0.9 });
+                    const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
+                    marker.bindPopup(`<b>${site.name}</b><br>${site.address}<br><small>${popupText}</small>`);
+                    reliefBounds.push([site.lat, site.lng]);
+                });
+
+                if (reliefBounds.length > 0) {
+                    map.fitBounds(reliefBounds, { padding: [50, 50] });
+                }
+            }
+
+            function displayRoute(employeeName) {
+                routeLayer.clearLayers();
+                allSitesLayer.clearLayers();
+                officerLayer.clearLayers();
+                managerLegend.style.opacity = 0;
+                reliefLegend.classList.add('hidden');
+                
+                const relief = breakReliefs[employeeName];
+
+                if (!relief) return;
+
+                const routePoints = [];
+                const aggregatedStops = {};
+                let stopCounter = 1;
+
+                const scheduleContainer = document.getElementById('route-schedule');
+                scheduleContainer.innerHTML = '';
+                
+                relief.schedule.forEach((item, index) => {
+                    const scheduleItemDiv = document.createElement('div');
+                    scheduleItemDiv.className = 'animate-slide-in-up';
+                    scheduleItemDiv.style.animationDelay = `${index * 50}ms`;
+                    
+                    if (item.isBreak) {
+                        scheduleItemDiv.classList.add('p-3', 'rounded-lg', 'bg-gray-800/50');
+                        scheduleItemDiv.innerHTML = `
+                            <div class="text-amber-400">${item.locationName}</div>
+                            ${item.startTime ? `<div class="text-sm text-gray-400">${item.startTime} - ${item.endTime}</div>` : ''}
+                        `;
+                    } else {
+                        scheduleItemDiv.classList.add('p-3', 'rounded-lg', 'bg-gray-700/50', 'border', 'border-gray-600/50');
+                        const site = findSiteByAddress(item.locationName);
+                        if (site) {
+                            scheduleItemDiv.innerHTML = `
+                                <div class="text-white"><span class="text-gray-400">${stopCounter}.</span> ${site.name}</div>
+                                <div class="text-sm text-gray-400 pl-4">${item.startTime} - ${item.endTime}</div>
+                                <div class="text-xs text-gray-500 pl-4">${site.address}</div>
+                            `;
+                            routePoints.push([site.lat, site.lng]);
+                            
+                            const key = `${site.lat},${site.lng}`;
+                            if (!aggregatedStops[key]) {
+                                aggregatedStops[key] = { lat: site.lat, lng: site.lng, name: site.name, stopNums: [] };
+                            }
+                            aggregatedStops[key].stopNums.push(stopCounter);
+                        } else {
+                             scheduleItemDiv.innerHTML = `
+                                <div class="text-red-400">${stopCounter}. Location not found</div>
+                                <div class="text-sm text-red-500">${item.locationName}</div>`;
+                        }
+                        stopCounter++;
+                    }
+                    scheduleContainer.appendChild(scheduleItemDiv);
+                });
+                
+                if (routePoints.length > 1) {
+                    L.polyline(routePoints, { color: relieverColors[employeeName] || '#3388ff', weight: 4, opacity: 0.8 }).addTo(routeLayer);
+                }
+
+                Object.values(aggregatedStops).forEach(stop => {
+                    const stopNumbersText = stop.stopNums.join(',');
+                    const iconWidth = 10 * stopNumbersText.length + 20;
+                    
+                    const siteColor = relieverColors[employeeName];
+                    if (siteColor) {
+                        const bgIcon = createColoredIcon(siteColor, { opacity: 0.8, scale: 1.1 });
+                        L.marker([stop.lat, stop.lng], { icon: bgIcon }).addTo(routeLayer);
+                    }
+
+                    const numberIcon = L.divIcon({ 
+                        className: 'route-marker-icon', 
+                        html: `<span>${stopNumbersText}</span>`, 
+                        iconSize: [iconWidth, 28], 
+                        iconAnchor: [iconWidth / 2, 14] 
+                    });
+                    L.marker([stop.lat, stop.lng], { icon: numberIcon, zIndexOffset: 1000 })
+                        .bindPopup(`<b>Stops ${stopNumbersText}: ${stop.name}</b>`)
+                        .addTo(routeLayer);
+                });
+                
+                if (routePoints.length > 0) {
+                    map.fitBounds(routePoints, { padding: [50, 50] });
+                }
+
+                document.getElementById('route-employee-name').textContent = `${employeeName}'s Route`;
+                
+                switchView(routeInfoSection);
+            }
+            
+            // --- UPDATED SITE SEARCH & OFFICER MAPPING --- //
+
+            function displaySiteOfficers(site) {
+                allSitesLayer.clearLayers();
+                routeLayer.clearLayers();
+                officerLayer.clearLayers();
+                managerLegend.style.opacity = 0;
+                reliefLegend.classList.add('hidden');
+
+                const bounds = [[site.lat, site.lng]];
+
+                // Find the manager and color for the site
+                let siteManager = 'Unknown';
+                let siteColor = '#3388ff'; // Default color
+                 for (const [manager, locations] of Object.entries(sites)) {
+                    if (locations.some(s => s.name === site.name)) {
+                        siteManager = manager;
+                        siteColor = managerColors[manager];
+                        break;
+                    }
+                }
+
+                // Add a marker for the job site
+                const siteIcon = createColoredIcon(siteColor, { scale: 1.2 });
+                L.marker([site.lat, site.lng], { icon: siteIcon, zIndexOffset: 1000 })
+                    .bindPopup(`<b>${site.name}</b><br>${site.address}<br><small>Manager: ${siteManager}</small>`)
+                    .addTo(allSitesLayer).openPopup();
+
+                const officerListContainer = document.getElementById('officer-list');
+                officerListContainer.innerHTML = '';
+                document.getElementById('officer-site-name').textContent = site.name;
+
+                // Find officers assigned to this site
+                const siteOfficers = officers.filter(officer => {
+                    if(!officer.jobAddress) return false;
+                    const normalizedJobAddr = officer.jobAddress.toLowerCase().replace(/ste|suite|apt|#|unit|piz/g, '').replace(/\s+/g, ' ').trim();
+                    const normalizedSiteAddr = site.address.toLowerCase().replace(/ste|suite|apt|#|unit|piz/g, '').replace(/\s+/g, ' ').trim();
+                    return normalizedSiteAddr.includes(normalizedJobAddr) || normalizedJobAddr.includes(normalizedSiteAddr);
+                });
+
+
+                if (siteOfficers.length > 0) {
+                    const homeIcon = createHomeIcon();
+                    siteOfficers.forEach((officer, index) => {
+                        // Display officer in sidebar
+                        const officerDiv = document.createElement('div');
+                        officerDiv.className = 'p-3 rounded-lg bg-gray-700/50 border border-gray-600/50 animate-slide-in-up';
+                        officerDiv.style.animationDelay = `${index * 50}ms`;
+                        officerDiv.innerHTML = `
+                            <div class="text-white">${officer.firstName} ${officer.lastName}</div>
+                            <div class="text-xs text-gray-500">${officer.homeAddress}</div>
+                        `;
+                        officerListContainer.appendChild(officerDiv);
+
+                        // Plot officer's home on the map if coordinates exist
+                        if (officer.homeLat && officer.homeLng) {
+                            const homeMarker = L.marker([officer.homeLat, officer.homeLng], { icon: homeIcon })
+                                .addTo(officerLayer);
+                            homeMarker.bindPopup(`<b>${officer.firstName} ${officer.lastName}'s Home</b><br>${officer.homeAddress}`);
+                            bounds.push([officer.homeLat, officer.homeLng]);
+                        }
+                    });
+                } else {
+                     const noOfficerDiv = document.createElement('div');
+                     noOfficerDiv.className = 'p-3 rounded-lg bg-gray-800/50 text-gray-400';
+                     noOfficerDiv.textContent = 'No primary officers found for this site in the provided data.';
+                     officerListContainer.appendChild(noOfficerDiv);
+                }
+
+                // Adjust map view to fit all markers
+                if (bounds.length > 1) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                } else {
+                    map.setView([site.lat, site.lng], 15);
+                }
+
+                switchView(officerListView);
+            }
+
+            const siteSearchInput = document.getElementById('site-search-input');
+            const siteSuggestionsContainer = document.getElementById('site-suggestions');
+
+            siteSearchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                siteSuggestionsContainer.innerHTML = '';
+                if (query.length < 2) return;
+
+                const filteredSites = allSitesList.filter(site => 
+                    site.name.toLowerCase().includes(query) ||
+                    site.address.toLowerCase().includes(query)
+                );
+
+                filteredSites.forEach((site, index) => {
+                    const suggestionDiv = document.createElement('div');
+                    suggestionDiv.className = 'p-3 bg-white text-gray-900 rounded-lg hover:bg-gray-200 cursor-pointer animate-slide-in-up';
+                    suggestionDiv.style.animationDelay = `${index * 30}ms`;
+                    suggestionDiv.textContent = `${site.name} - ${site.address}`;
+                    suggestionDiv.onclick = () => {
+                        siteSearchInput.value = '';
+                        siteSuggestionsContainer.innerHTML = '';
+                        displaySiteOfficers(site);
+                    };
+                    siteSuggestionsContainer.appendChild(suggestionDiv);
+                });
+            });
+
+
+            // Populate Manager Legend
+            const legendContainer = document.getElementById('manager-legend');
+            Object.keys(managerColors).sort().forEach((name, index) => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'flex items-center space-x-3 animate-slide-in-up';
+                legendItem.style.animationDelay = `${index * 50}ms`;
+                legendItem.innerHTML = `
+                    <div class="w-4 h-4 rounded-full flex-shrink-0" style="background-color: ${managerColors[name]};"></div>
+                    <span class="text-sm text-gray-200">${name}</span>`;
+                legendContainer.appendChild(legendItem);
+            });
+
+            // Populate relief employee list
+            const employeeListContainer = document.getElementById('relief-employee-list');
+            Object.keys(breakReliefs).sort().forEach((name, index) => {
+                const button = document.createElement('button');
+                button.textContent = name;
+                button.className = 'w-full text-left p-3 bg-white text-gray-900 rounded-lg hover:bg-gray-200 transition-colors duration-200 transform hover:translate-x-1 animate-slide-in-up';
+                button.style.animationDelay = `${index * 50}ms`;
+                button.onclick = () => displayRoute(name);
+                employeeListContainer.appendChild(button);
+            });
+
+            // UI Views & State
+            const initialView = document.getElementById('initial-view');
+            const reliefListView = document.getElementById('relief-list-view');
+            const routeInfoSection = document.getElementById('route-info-section');
+            const siteSearchView = document.getElementById('site-search-view');
+            const officerListView = document.getElementById('officer-list-view');
+            const allViews = [initialView, reliefListView, routeInfoSection, siteSearchView, officerListView];
+
+            function switchView(targetView) {
+                allViews.forEach(view => {
+                    if (view !== targetView) {
+                        view.classList.add('hidden');
+                    }
+                });
+                targetView.classList.remove('hidden');
+            }
+            
+            // Event Listeners
+            document.getElementById('show-relief-routes-btn').addEventListener('click', () => {
+                switchView(reliefListView);
+                displayOnlyReliefSites();
+            });
+
+             document.getElementById('show-site-search-btn').addEventListener('click', () => {
+                switchView(siteSearchView);
+                allSitesLayer.clearLayers();
+                officerLayer.clearLayers();
+                routeLayer.clearLayers();
+                map.setView([37.7749, -122.4194], 13);
+            });
+
+            document.getElementById('back-to-initial-btn').addEventListener('click', () => {
+                switchView(initialView);
+                displayAllSites();
+                map.setView([37.7749, -122.4194], 13);
+            });
+
+             document.getElementById('back-to-initial-from-search-btn').addEventListener('click', () => {
+                switchView(initialView);
+                displayAllSites();
+                map.setView([37.7749, -122.4194], 13);
+            });
+
+            document.getElementById('back-to-relief-list-btn').addEventListener('click', () => {
+                switchView(reliefListView);
+                displayOnlyReliefSites();
+            });
+
+             document.getElementById('back-to-site-search-btn').addEventListener('click', () => {
+                switchView(siteSearchView);
+                officerLayer.clearLayers();
+                allSitesLayer.clearLayers();
+            });
+            
+            // Initial State
+            displayAllSites();
+            mapInitialized = true;
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeMapApplication);
+    </script>
+</body>
+</html>
