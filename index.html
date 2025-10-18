@@ -60,7 +60,7 @@
             transform: translateY(20px);
             pointer-events: none;
             position: absolute;
-            width: calc(100% - 2rem); /* p-4 is 1rem on each side */
+            width: calc(100% - 1.5rem); /* p-3 is 0.75rem on each side */
         }
 
         /* Staggered list animation */
@@ -123,39 +123,39 @@
         <div class="flex flex-col md:flex-row h-screen">
             <!-- Sidebar -->
             <aside class="w-full md:w-1/3 lg:w-1/4 bg-gray-900 text-gray-300 shadow-2xl flex flex-col">
-                <div class="p-4 border-b border-gray-700/50">
-                    <h1 class="text-xl text-yellow-400 tracking-wider">SF Map</h1>
-                    <p class="text-xs text-yellow-400 whitespace-nowrap">Developed by Rochak Kadel</p>
+                <div class="p-3 border-b border-gray-700/50">
+                    <h1 class="text-lg text-yellow-400 tracking-wider">SF Map</h1>
+                    <p class="text-[11px] text-yellow-400 whitespace-nowrap [text-shadow:0_0_8px_rgba(251,191,36,0.8)]">Developed by Rochak Kadel</p>
                 </div>
                 
-                <div class="flex-grow p-4 overflow-y-auto custom-scrollbar relative">
+                <div class="flex-grow p-3 overflow-y-auto custom-scrollbar relative">
                     <!-- View for initial buttons -->
                     <div id="initial-view" class="view-panel space-y-2">
-                        <button id="show-site-search-btn" class="w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
+                        <button id="show-site-search-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
                             Search Sites
                         </button>
-                        <button id="show-all-officers-btn" class="w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
+                        <button id="show-all-officers-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
                             See All Officers
                         </button>
                         
                         <hr class="border-white my-2">
 
-                        <button id="show-relief-routes-btn" class="w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
+                        <button id="show-relief-routes-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
                             Break Relief Routes
                         </button>
-                        <button id="show-cold-starts-btn" class="w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
+                        <button id="show-cold-starts-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
                             Cold Starts
                         </button>
-                        <button id="show-zones-btn" class="w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
+                        <button id="show-zones-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
                             OPS Zones
                         </button>
                     </div>
 
                     <!-- Zones View -->
                     <div id="zones-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg text-white">OPS Zones</h2>
-                            <button id="back-from-zones-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-base text-white">OPS Zones</h2>
+                            <button id="back-from-zones-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
                         </div>
                         <div id="zones-list" class="space-y-2">
                             <!-- Zone buttons will be injected here -->
@@ -165,20 +165,20 @@
                     <!-- Cold Starts View -->
                     <div id="cold-starts-view" class="view-panel hidden">
                         <div id="cold-starts-day-selector">
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 class="text-lg text-white">Cold Starts</h2>
-                                <button id="back-from-cold-starts-day-select-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                            <div class="flex items-center justify-between mb-2">
+                                <h2 class="text-base text-white">Cold Starts</h2>
+                                <button id="back-from-cold-starts-day-select-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
                             </div>
                             <div class="space-y-2">
-                                <button id="show-weekdays-cold-starts" class="w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Weekdays</button>
-                                <button id="show-saturday-cold-starts" class="w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Saturday</button>
-                                <button id="show-sunday-cold-starts" class="w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Sunday</button>
+                                <button id="show-weekdays-cold-starts" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Weekdays</button>
+                                <button id="show-saturday-cold-starts" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Saturday</button>
+                                <button id="show-sunday-cold-starts" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Sunday</button>
                             </div>
                         </div>
                         <div id="cold-starts-list-container" class="hidden">
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 id="cold-starts-title" class="text-lg text-white"></h2>
-                                <button id="back-to-cold-starts-day-select-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                            <div class="flex items-center justify-between mb-2">
+                                <h2 id="cold-starts-title" class="text-base text-white"></h2>
+                                <button id="back-to-cold-starts-day-select-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
                             </div>
                             <div id="cold-starts-list" class="space-y-2 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                 <!-- Cold start items will be injected here -->
@@ -188,29 +188,29 @@
 
                     <!-- All Officers View -->
                     <div id="all-officers-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg text-white">All Officers</h2>
-                            <button id="back-from-all-officers-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-base text-white">All Officers</h2>
+                            <button id="back-from-all-officers-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
                         </div>
-                        <input type="text" id="officer-search-input" placeholder="search..." class="w-full p-1.5 text-sm rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="officer-search-input" placeholder="search..." class="w-full p-1 text-xs rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <div id="officer-suggestions" class="mt-2 space-y-2 max-h-96 overflow-y-auto custom-scrollbar"></div>
                     </div>
 
                       <!-- View for Site Search -->
                     <div id="site-search-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg text-white">Search Site</h2>
-                            <button id="back-to-initial-from-search-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-base text-white">Search Site</h2>
+                            <button id="back-to-initial-from-search-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
                         </div>
-                        <input type="text" id="site-search-input" placeholder="search..." class="w-full p-1.5 text-sm rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="site-search-input" placeholder="search..." class="w-full p-1 text-xs rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <div id="site-suggestions" class="mt-2 space-y-2 max-h-96 overflow-y-auto custom-scrollbar"></div>
                     </div>
 
                     <!-- View for relief employee list -->
                     <div id="relief-list-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg text-white">Relief Staff</h2>
-                            <button id="back-to-initial-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-base text-white">Relief Staff</h2>
+                            <button id="back-to-initial-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
                         </div>
                         <div id="relief-employee-list" class="space-y-2">
                             <!-- Employee buttons will be injected here -->
@@ -219,9 +219,9 @@
 
                     <!-- Selected Route Information Section -->
                     <div id="route-info-section" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 id="route-employee-name" class="text-lg text-white"></h3>
-                            <button id="back-to-relief-list-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 id="route-employee-name" class="text-base text-white"></h3>
+                            <button id="back-to-relief-list-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
                         </div>
                         <div id="route-schedule" class="space-y-2">
                             <!-- Schedule details will be injected here -->
@@ -230,9 +230,9 @@
 
                     <!-- Officers at Site View -->
                     <div id="officer-list-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 id="officer-site-name" class="text-lg text-white"></h3>
-                            <button id="back-to-site-search-btn" class="text-sm text-blue-400 hover:text-blue-300 transition">Back</button>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 id="officer-site-name" class="text-base text-white"></h3>
+                            <button id="back-to-site-search-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
                         </div>
                         <div id="officer-list" class="space-y-2">
                               <!-- Officer details will be injected here -->
@@ -245,16 +245,16 @@
             <main class="w-full md:w-2/3 lg:w-3/4 relative">
                 <div id="map"></div>
                 <!-- Legends Container -->
-                <div id="legends-container" class="absolute top-4 right-4 space-y-3 z-[1000]">
+                <div id="legends-container" class="absolute top-4 right-4 space-y-2 z-[1000]">
                         <!-- Manager Legend -->
-                    <div id="manager-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-2 rounded-lg shadow-lg transition-opacity duration-300 border border-gray-700/50">
+                    <div id="manager-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-1.5 rounded-lg shadow-lg transition-opacity duration-300 border border-gray-700/50">
                         <div id="manager-legend" class="space-y-1">
                             <!-- Legend items will be injected here by JavaScript -->
                         </div>
                     </div>
 
                     <!-- Relief Site Legend -->
-                    <div id="relief-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-2 rounded-lg shadow-lg transition-opacity duration-300 hidden max-h-[70vh] overflow-y-auto custom-scrollbar border border-gray-700/50">
+                    <div id="relief-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-1.5 rounded-lg shadow-lg transition-opacity duration-300 hidden max-h-[70vh] overflow-y-auto custom-scrollbar border border-gray-700/50">
                         <div id="relief-legend-list" class="space-y-1">
                             <!-- Relief site legend items will be injected here -->
                         </div>
@@ -1123,12 +1123,12 @@
                     if (!site) return;
 
                     const itemDiv = document.createElement('div');
-                    itemDiv.className = 'group p-2 rounded-lg bg-white text-gray-900 shadow-xl shadow-white/30 cursor-pointer hover:bg-black hover:text-white transition-colors duration-200 animate-slide-in-up';
+                    itemDiv.className = 'group p-1.5 rounded-lg bg-white text-gray-900 shadow-xl shadow-white/30 cursor-pointer hover:bg-black hover:text-white transition-colors duration-200 animate-slide-in-up';
                     itemDiv.style.animationDelay = `${index * 30}ms`;
                     itemDiv.innerHTML = `
-                        <div class="text-amber-600 group-hover:text-amber-400 font-mono text-xs">${formatMilitaryTime(start.time)}</div>
-                        <div class="text-xs text-gray-500 group-hover:text-gray-400 truncate">${site.address}</div>
-                        <div class="text-sm text-gray-900 group-hover:text-white">${start.officer}</div>
+                        <div class="text-amber-600 group-hover:text-amber-400 font-mono text-[11px]">${formatMilitaryTime(start.time)}</div>
+                        <div class="text-[10px] text-gray-500 group-hover:text-gray-400 truncate">${site.address}</div>
+                        <div class="text-xs text-gray-900 group-hover:text-white">${start.officer}</div>
                     `;
                     itemDiv.onclick = () => {
                         highlightLayer.clearLayers();
@@ -1212,8 +1212,8 @@
                     legendItem.className = 'flex items-center space-x-2 animate-slide-in-up';
                     legendItem.style.animationDelay = `${Object.keys(relieverColors).sort().indexOf(relieverName) * 50}ms`;
                     legendItem.innerHTML = `
-                        <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${color};"></div>
-                        <span class="text-xs text-gray-200">${relieverName}</span>
+                        <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${color};"></div>
+                        <span class="text-[11px] text-gray-200">${relieverName}</span>
                     `;
                     reliefLegendList.appendChild(legendItem);
                 });
@@ -1284,19 +1284,19 @@
                     scheduleItemDiv.style.animationDelay = `${index * 50}ms`;
                     
                     if (item.isBreak) {
-                        scheduleItemDiv.classList.add('p-2', 'rounded-lg', 'bg-gray-800/50');
+                        scheduleItemDiv.classList.add('p-1.5', 'rounded-lg', 'bg-gray-800/50');
                         scheduleItemDiv.innerHTML = `
-                            <div class="text-amber-400 text-sm">${item.locationName}</div>
-                            ${item.startTime ? `<div class="text-xs text-gray-400">${item.startTime} - ${item.endTime}</div>` : ''}
+                            <div class="text-amber-400 text-xs">${item.locationName}</div>
+                            ${item.startTime ? `<div class="text-[10px] text-gray-400">${item.startTime} - ${item.endTime}</div>` : ''}
                         `;
                     } else {
-                        scheduleItemDiv.classList.add('p-2', 'rounded-lg', 'bg-gray-700/50', 'border', 'border-gray-600/50');
+                        scheduleItemDiv.classList.add('p-1.5', 'rounded-lg', 'bg-gray-700/50', 'border', 'border-gray-600/50');
                         const site = findSiteBySearchTerm(item.locationName);
                         if (site) {
                             scheduleItemDiv.innerHTML = `
-                                <div class="text-white text-sm"><span class="text-gray-400">${stopCounter}.</span> ${site.name}</div>
-                                <div class="text-xs text-gray-400 pl-4">${item.startTime} - ${item.endTime}</div>
-                                <div class="text-xs text-gray-500 pl-4">${site.address}</div>
+                                <div class="text-white text-xs"><span class="text-gray-400">${stopCounter}.</span> ${site.name}</div>
+                                <div class="text-[10px] text-gray-400 pl-3">${item.startTime} - ${item.endTime}</div>
+                                <div class="text-[10px] text-gray-500 pl-3">${site.address}</div>
                             `;
                             routePoints.push([site.lat, site.lng]);
                             
@@ -1307,8 +1307,8 @@
                             aggregatedStops[key].stopNums.push(stopCounter);
                         } else {
                              scheduleItemDiv.innerHTML = `
-                                <div class="text-red-400 text-sm">${stopCounter}. Location not found</div>
-                                <div class="text-xs text-red-500">${item.locationName}</div>`;
+                                <div class="text-red-400 text-xs">${stopCounter}. Location not found</div>
+                                <div class="text-[10px] text-red-500">${item.locationName}</div>`;
                         }
                         stopCounter++;
                     }
@@ -1390,11 +1390,11 @@
                     const homeIcon = createHomeIcon();
                     siteOfficers.forEach((officer, index) => {
                         const officerDiv = document.createElement('div');
-                        officerDiv.className = 'group p-2 rounded-lg bg-white text-gray-900 shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200 animate-slide-in-up cursor-pointer';
+                        officerDiv.className = 'group p-1.5 rounded-lg bg-white text-gray-900 shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200 animate-slide-in-up cursor-pointer';
                         officerDiv.style.animationDelay = `${index * 50}ms`;
                         officerDiv.innerHTML = `
-                            <div class="text-sm text-gray-900 group-hover:text-white">${officer.firstName} ${officer.lastName}</div>
-                            <div class="text-xs text-gray-500 group-hover:text-gray-400">${officer.homeAddress}</div>
+                            <div class="text-xs text-gray-900 group-hover:text-white">${officer.firstName} ${officer.lastName}</div>
+                            <div class="text-[10px] text-gray-500 group-hover:text-gray-400">${officer.homeAddress}</div>
                         `;
                         officerDiv.onclick = () => {
                             if (officer.homeLat && officer.homeLng) {
@@ -1444,7 +1444,7 @@
 
                 filteredSites.forEach((site, index) => {
                     const suggestionDiv = document.createElement('div');
-                    suggestionDiv.className = 'p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white cursor-pointer animate-slide-in-up transition-colors duration-200';
+                    suggestionDiv.className = 'p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white cursor-pointer animate-slide-in-up transition-colors duration-200';
                     suggestionDiv.style.animationDelay = `${index * 30}ms`;
                     suggestionDiv.textContent = `${site.name} - ${site.address}`;
                     suggestionDiv.onclick = () => {
@@ -1462,8 +1462,8 @@
                 legendItem.className = 'flex items-center space-x-2 animate-slide-in-up';
                 legendItem.style.animationDelay = `${index * 50}ms`;
                 legendItem.innerHTML = `
-                    <div class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${managerColors[name]};"></div>
-                    <span class="text-xs text-gray-200">${name}</span>`;
+                    <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${managerColors[name]};"></div>
+                    <span class="text-[11px] text-gray-200">${name}</span>`;
                 legendContainer.appendChild(legendItem);
             });
 
@@ -1471,7 +1471,7 @@
             Object.keys(breakReliefs).sort().forEach((name, index) => {
                 const button = document.createElement('button');
                 button.textContent = name;
-                button.className = 'w-full text-left p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
+                button.className = 'w-full text-left p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
                 button.style.animationDelay = `${index * 50}ms`;
                 button.onclick = () => displayRoute(name);
                 employeeListContainer.appendChild(button);
@@ -1483,7 +1483,7 @@
                 Object.keys(opsZones).forEach((zoneName, index) => {
                     const button = document.createElement('button');
                     button.textContent = zoneName;
-                    button.className = 'w-full text-center p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
+                    button.className = 'w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
                     button.style.animationDelay = `${index * 50}ms`;
                     button.onclick = () => displayZoneSites(zoneName);
                     zonesListContainer.appendChild(button);
@@ -1621,7 +1621,7 @@
 
                 filteredOfficers.forEach((officer, index) => {
                     const suggestionDiv = document.createElement('div');
-                    suggestionDiv.className = 'p-2 text-sm bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white cursor-pointer animate-slide-in-up transition-colors duration-200';
+                    suggestionDiv.className = 'p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white cursor-pointer animate-slide-in-up transition-colors duration-200';
                     suggestionDiv.style.animationDelay = `${index * 30}ms`;
                     const fullName = `${officer.firstName} ${officer.lastName}`;
                     suggestionDiv.textContent = fullName;
@@ -1646,4 +1646,5 @@
     </script>
 </body>
 </html>
+
 
