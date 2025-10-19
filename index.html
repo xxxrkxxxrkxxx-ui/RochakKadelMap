@@ -137,6 +137,10 @@
                         <button id="show-all-officers-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
                             See All Officers
                         </button>
+
+                         <button id="show-floaters-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
+                           Search Floaters
+                        </button>
                         
                         <hr class="border-white my-2">
 
@@ -149,6 +153,30 @@
                         <button id="show-zones-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
                             OPS Zones
                         </button>
+                       
+                    </div>
+
+                    <!-- Floaters View -->
+                    <div id="floaters-view" class="view-panel hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-base text-white">Floaters</h2>
+                            <button id="back-from-floaters-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
+                        </div>
+                        <div id="floaters-list" class="space-y-2">
+                            <!-- Floater buttons will be injected here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Floater Sites View -->
+                    <div id="floater-sites-view" class="view-panel hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 id="floater-name-title" class="text-base text-white"></h2>
+                            <button id="back-to-floaters-list-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
+                        </div>
+                        <input type="text" id="floater-site-search-input" placeholder="search sites..." class="w-full p-1 text-xs rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
+                        <div id="floater-sites-list" class="space-y-2 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            <!-- Floater site buttons will be injected here -->
+                        </div>
                     </div>
 
                     <!-- Zones View -->
@@ -750,7 +778,6 @@
             { "firstName": "Ruth", "lastName": "Dock", "homeAddress": "2550 Hilborn Rd Apt 290, CA, 94534-8609", "jobAddress": "1400 Geary Blvd", "homeLat": 38.281, "homeLng": -122.0463 },
             { "firstName": "Annastia", "lastName": "Singleton", "homeAddress": "411 29th St Unit 321, CA, 94609-3660", "jobAddress": "220 Montgomery St", "homeLat": 37.8188, "homeLng": -122.2646 },
             { "firstName": "Rochak", "lastName": "Kadel", "homeAddress": "6767 Hotdog Road", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 18.656654, "homeLng": -11.601563 },
-             { "firstName": "Ray", "lastName": "Solomon", "homeAddress": "112 Man Moon road", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 13.413280, "homeLng": -89.116020 },
             { "firstName": "Inder", "lastName": "Gill", "homeAddress": " 8069 Deep in the slums", "jobAddress": "180 Montgomery St Ste 700", "homeLat": -68.005514, "homeLng": -64.511719 },
             { "firstName": "Julio", "lastName": "Daldon", "homeAddress": "33 No fundo da favela", "jobAddress": "180 Montgomery St Ste 700", "homeLat": -22.905254, "homeLng":-43.231888 },
             { "firstName": "Brooke", "lastName": "Perry", "homeAddress": "756 Frog Juice Ave ", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 17.981346, "homeLng": -69.873047 },
@@ -931,7 +958,6 @@
             { "firstName": "Roberto", "lastName": "Avalos", "homeAddress": "2736 Mission St Apt 1, CA, 94110-3104", "jobAddress": "210 Post St", "homeLat": 37.7523, "homeLng": -122.4187 }
         ];
 
-
         // --- MAP INITIALIZATION & LOGIC --- //
         let mapInitialized = false;
 
@@ -939,9 +965,22 @@
             "Adham Shaef": "#2980b9",     // Purple
             "Apithany Hayes": "Black", // Green
             "Eli Walin": "white",     // Blue
-            "Imran Anwar": "green",    // Orange
+            "Imran Anwar": "green",   // Orange
             "Melaysia Horn": "#c0392b", // Red
-            "Yolanda Perez": "yellow"    // Cyan
+            "Yolanda Perez": "yellow"     // Cyan
+        };
+        
+        const floaterData = {
+            "O. Obazee": ["101 M", "425 C", "475 S", "CJM", "222 K", "150 S", "71 S", "456 M", "425 M", "601 C", "55 H", "1280 L", "1400 G", "220 M", "100 M", "717 M", "210 P", "170 ML", "600 C", "115 S", "1800 M", "111 P", "599 S", "Sutro", "501 2nd", "420 23rd"],
+            "L. White": ["100 M", "500 H", "425 M", "1280 L", "210 P", "1128 M", "1400 G", "220 M", "369 P", "71 S", "55 H", "30 ML", "717 M", "456 M", "222 K", "500 P", "425 C", "90 NM", "601 C", "150 S"],
+            "D. Ozabuki": ["101 M", "1635 D", "240 S", "26 O", "600 C", "CJM", "475 S", "71 S", "1280 L", "210 P", "456 M", "153 K", "633 F", "115 S", "717 M"],
+            "R. Seddi": ["150 P", "1128 M", "311 C", "1019 M", "1635 D", "90 NM", "26 O", "30 G", "210 P", "30 ML", "153 K", "170 ML"],
+            "E. Oldokh": ["CJM", "1128 M", "210 P", "1700 C", "350 P"],
+            "J. Ngilbus": ["201 M", "1400 G", "30 G", "111 P", "220 M"],
+            "Y. Farogbe": ["181 F", "750 B", "101 M", "222 K", "CJM", "1019 M", "90 NM", "220 M"],
+            "C. Rimer": ["30 ML", "170 ML", "369 P", "600 C", "1280 L"],
+            "D. Monte": ["150 P", "101 Mi", "26 O", "111 P", "153 K", "425 C", "101 M", "210 P", "230 C", "220 M"],
+            "I. Jones": ["750 B", "222 K", "230 C", "101 Mi", "180 M", "711 E", "1635 D"]
         };
 
         function initializeMapApplication() {
@@ -974,6 +1013,7 @@
             };
             
             function findSiteBySearchTerm(searchTerm) {
+                if (!searchTerm) return null;
                 const normalizedSearch = searchTerm.toLowerCase().trim().replace(/\.$/, '');
                 
                 let foundSite = allSitesList.find(site => site.name.toLowerCase().trim() === normalizedSearch);
@@ -1430,6 +1470,142 @@
                 switchView(officerListView);
             }
 
+            // --- Floater Logic Start ---
+            const siteAbbreviations = {
+                "CJM": "The Contemporary Jewish Museum", "Sutro": "Sutro Tower, Inc", "101 M": "JLL - 101 Montgomery St", "425 C": "JLL - 425 California St",
+                "222 K": "Flynn Properties - 222 Kearny St", "150 S": "JLL - 150 Spear St", "71 S": "CW - 71 Stevenson St", "456 M": "CW - 456 Montgomery St",
+                "425 M": "CW - 425 Market St", "601 C": "ECP - 601 California St", "1280 L": "WPA - 1280 Laguna", "1400 G": "Sequoias",
+                "220 M": "Swig - 220 Montgomery St", "100 M": "Van Barton - 100 Montgomery", "717 M": "Colliers - 717 Market St", "210 P": "Transwestern - 210 Post St",
+                "170 ML": "YCS Investments - 170 Maiden Lane", "600 C": "JLL - 600 California St", "115 S": "Van Barton - 115 Sansome", "1800 M": "AJ Capital Partners",
+                "111 P": "Doublewood Investment", "599 S": "Olympic Club Lakeside", "501 2nd": "Swig - 501 2nd St", "420 23rd": "The Potrero Power Station",
+                "500 H": "CBRE - 500 Howard St", "30 ML": "Seaker & Sons", "500 P": "CBRE - 500 Pine", "90 NM": "JKL Corporation",
+                "1635 D": "Tusker Corporation", "240 S": "Colliers - 240 Stockton St", "26 O": "Colliers - 26 O'Farrell St", "633 F": "Swig - 633 Folsom St",
+                "153 K": "Colliers - 153 Kearny St", "150 P": "TMG LLC - 150 Post St", "311 C": "Seligman - 311 California St", "1019 M": "Transwestern - 1019 Market St",
+                "30 G": "G&G Partners", "201 M": "JLL - 201 Mission St", "181 F": "181 Fremont Street", "750 B": "RREG - 750 Battery Corp.",
+                "101 MI": "Van Barton - 101 Mission", "180 M": "CBRE - 180 Montgomery", "711 E": "EPA - 711 Eddy St", "1128 M": "CBRE - 1128 Market St",
+                "230 C": "Metrovation"
+            };
+
+            function findOfficerByAbbreviatedName(name) {
+                const parts = name.split('. ');
+                if (parts.length !== 2) return null;
+                const [initial, lastName] = parts;
+                return officers.find(o => o.firstName.charAt(0).toLowerCase() === initial.toLowerCase() && o.lastName.toLowerCase() === lastName.toLowerCase());
+            }
+
+            function displayAllFloaterSitesOnMap(floaterName) {
+                allSitesLayer.clearLayers();
+                routeLayer.clearLayers();
+                officerLayer.clearLayers();
+                highlightLayer.clearLayers();
+                managerLegend.style.opacity = 1;
+                reliefLegend.classList.add('hidden');
+
+                const floater = findOfficerByAbbreviatedName(floaterName);
+                const assignedSiteAbbrs = floaterData[floaterName] || [];
+                const bounds = [];
+
+                if (floater && floater.homeLat && floater.homeLng) {
+                    const blackPin = createColoredIcon('black', {scale: 0.9});
+                    L.marker([floater.homeLat, floater.homeLng], { icon: blackPin, zIndexOffset: 2000 })
+                        .bindPopup(`<b>${floater.firstName} ${floater.lastName}</b><br>Home Address`, {className: 'custom-popup'})
+                        .addTo(officerLayer);
+                    bounds.push([floater.homeLat, floater.homeLng]);
+                }
+                
+                assignedSiteAbbrs.forEach(abbr => {
+                    const siteAbbrKey = Object.keys(siteAbbreviations).find(key => key.toLowerCase() === abbr.toLowerCase());
+                    const targetSiteName = siteAbbreviations[siteAbbrKey];
+
+                    if (targetSiteName) {
+                        const site = findSiteBySearchTerm(targetSiteName);
+                        
+                        if (site) {
+                            let manager = 'Unknown';
+                            let color = '#808080';
+                            for (const [mgr, siteList] of Object.entries(sites)) {
+                                if (siteList.some(s => s.name === site.name)) {
+                                    manager = mgr;
+                                    color = managerColors[mgr];
+                                    break;
+                                }
+                            }
+                            const icon = createColoredIcon(color);
+                            const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
+                            const popupContent = `
+                                <b>${site.name}</b><br>
+                                ${site.address}<br>
+                                <small>Manager: ${manager}</small>`;
+                            marker.bindPopup(popupContent, {className: 'custom-popup'});
+                            bounds.push([site.lat, site.lng]);
+                        }
+                    }
+                });
+
+                if(bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            }
+            
+            function showFloaterDetails(floaterName) {
+                displayAllFloaterSitesOnMap(floaterName);
+
+                document.getElementById('floater-name-title').textContent = `${floaterName}'s Sites`;
+                const sitesListContainer = document.getElementById('floater-sites-list');
+                sitesListContainer.innerHTML = '';
+
+                const siteSearchInput = document.getElementById('floater-site-search-input');
+                siteSearchInput.value = ''; // Clear previous search
+
+                const assignedSiteAbbrs = floaterData[floaterName] || [];
+                const siteButtons = [];
+                
+                const uniqueSiteNames = new Set();
+
+                assignedSiteAbbrs.forEach(abbr => {
+                    const siteAbbrKey = Object.keys(siteAbbreviations).find(key => key.toLowerCase() === abbr.toLowerCase());
+                    const targetSiteName = siteAbbreviations[siteAbbrKey];
+                    if (targetSiteName) {
+                        uniqueSiteNames.add(targetSiteName);
+                    }
+                });
+
+                const sortedSiteNames = Array.from(uniqueSiteNames).sort();
+
+                sortedSiteNames.forEach((targetSiteName, index) => {
+                    const site = findSiteBySearchTerm(targetSiteName);
+                    if (site) {
+                        const button = document.createElement('button');
+                        button.textContent = site.name;
+                        button.className = 'w-full text-left p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
+                        button.style.animationDelay = `${index * 30}ms`;
+                        button.onclick = () => {
+                            highlightLayer.clearLayers();
+                            const highlightIcon = createColoredIcon('black', { scale: 1.2 });
+                            L.marker([site.lat, site.lng], { icon: highlightIcon, zIndexOffset: 2000 }).addTo(highlightLayer);
+                            map.setView([site.lat, site.lng], 16);
+                        };
+                        sitesListContainer.appendChild(button);
+                        siteButtons.push(button);
+                    }
+                });
+
+                siteSearchInput.oninput = (e) => { // Use oninput for better handling
+                    const query = e.target.value.toLowerCase().trim();
+                    siteButtons.forEach(button => {
+                        const siteName = button.textContent.toLowerCase();
+                        if (siteName.includes(query)) {
+                            button.style.display = 'block';
+                        } else {
+                            button.style.display = 'none';
+                        }
+                    });
+                };
+
+                switchView(floaterSitesView);
+            }
+            // --- Floater Logic End ---
+
             const siteSearchInput = document.getElementById('site-search-input');
             const siteSuggestionsContainer = document.getElementById('site-suggestions');
 
@@ -1500,7 +1676,9 @@
             const allOfficersView = document.getElementById('all-officers-view');
             const coldStartsView = document.getElementById('cold-starts-view');
             const zonesView = document.getElementById('zones-view');
-            const allViews = [initialView, reliefListView, routeInfoSection, siteSearchView, officerListView, allOfficersView, coldStartsView, zonesView];
+            const floatersView = document.getElementById('floaters-view');
+            const floaterSitesView = document.getElementById('floater-sites-view');
+            const allViews = [initialView, reliefListView, routeInfoSection, siteSearchView, officerListView, allOfficersView, coldStartsView, zonesView, floatersView, floaterSitesView];
 
             function switchView(targetView) {
                 allViews.forEach(view => {
@@ -1520,6 +1698,24 @@
              document.getElementById('show-zones-btn').addEventListener('click', () => {
                 switchView(zonesView);
                 displayZoneButtons();
+                allSitesLayer.clearLayers();
+                officerLayer.clearLayers();
+                routeLayer.clearLayers();
+                highlightLayer.clearLayers();
+            });
+
+            document.getElementById('show-floaters-btn').addEventListener('click', () => {
+                switchView(floatersView);
+                const floatersListContainer = document.getElementById('floaters-list');
+                floatersListContainer.innerHTML = '';
+                Object.keys(floaterData).sort().forEach((name, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = name;
+                    button.className = 'w-full text-left p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
+                    button.style.animationDelay = `${index * 30}ms`;
+                    button.onclick = () => showFloaterDetails(name);
+                    floatersListContainer.appendChild(button);
+                });
                 allSitesLayer.clearLayers();
                 officerLayer.clearLayers();
                 routeLayer.clearLayers();
@@ -1551,6 +1747,19 @@
              document.getElementById('show-all-officers-btn').addEventListener('click', () => {
                 displayAllOfficersAndSites();
                 switchView(allOfficersView);
+            });
+
+            document.getElementById('back-from-floaters-btn').addEventListener('click', () => {
+                switchView(initialView);
+                displayAllSites();
+            });
+
+            document.getElementById('back-to-floaters-list-btn').addEventListener('click', () => {
+                switchView(floatersView);
+                allSitesLayer.clearLayers();
+                officerLayer.clearLayers();
+                routeLayer.clearLayers();
+                highlightLayer.clearLayers();
             });
 
             document.getElementById('back-from-zones-btn').addEventListener('click', () => {
