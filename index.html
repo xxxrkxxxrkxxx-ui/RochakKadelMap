@@ -21,10 +21,78 @@
         body {
             font-family: 'Courier New', Courier, monospace;
             font-weight: bold;
+            background-color: #000; /* Set body background for seamless loading */
+            overflow: hidden; /* Prevent scrolling during loading */
         }
         #map { 
             height: 100vh; 
         }
+
+        /* --- Loader Styles --- */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.7s ease-out, visibility 0.7s ease-out;
+        }
+
+        #loader.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        #loader canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .loader-content {
+            z-index: 1;
+            text-align: center;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
+        }
+
+        .loader-title {
+            font-size: 2.5rem;
+            letter-spacing: 0.2em;
+            animation: flicker 1.5s infinite alternate;
+        }
+
+        .loader-subtitle {
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            animation: flicker 2s infinite alternate;
+        }
+
+        @keyframes flicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% {
+                text-shadow:
+                    0 0 4px #0f0,
+                    0 0 11px #0f0,
+                    0 0 19px #0f0,
+                    0 0 40px #0f0,
+                    0 0 80px #0f0,
+                    0 0 90px #0f0,
+                    0 0 100px #0f0,
+                    0 0 150px #0f0;
+            }
+            20%, 24%, 55% {        
+                text-shadow: none;
+            }
+        }
+        /* --- End Loader Styles --- */
+
         /* Custom scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
@@ -118,15 +186,24 @@
 
     </style>
 </head>
-<body class="antialiased bg-gray-100 text-gray-800">
+<body class="antialiased text-gray-800">
 
-    <div id="app-container">
+    <!-- Hacker Loader -->
+    <div id="loader">
+        <canvas id="matrix-canvas"></canvas>
+        <div class="loader-content">
+            <h1 class="loader-title">ROCHAK GRIDVECTOR</h1>
+            <p class="loader-subtitle">Initializing datas...</p>
+        </div>
+    </div>
+
+    <div id="app-container" class="hidden">
         <div class="flex flex-col md:flex-row h-screen">
             <!-- Sidebar -->
             <aside class="w-full md:w-1/5 lg:w-1/6 bg-gray-900 text-gray-300 shadow-2xl flex flex-col">
                 <div class="p-3 border-b border-gray-700/50">
-                    <h1 class="text-lg text-yellow-400 tracking-wider">SF Map GridVector</h1>
-                    <p class="text-[11px] text-yellow-400 whitespace-nowrap [text-shadow:0_0_8px_rgba(251,191,36,0.8)]">DEVELOPED BY ROCHAK KADEL</p>
+                    <h1 class="text-lg text-lime-400 tracking-wider">SF GRIDVECTOR</h1>
+                    <p class="text-[8px] text-lime-400 whitespace-nowrap [text-shadow:0_0_8px_rgba(251,191,36,0.8)]">DEVELOPED BY ROCHAK KADEL</p>
                 </div>
                 
                 <div class="flex-grow p-3 overflow-y-auto custom-scrollbar relative">
@@ -140,7 +217,7 @@
                         </button>
 
                          <button id="show-floaters-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
-                           Search Floaters
+                            Search Floaters
                         </button>
                         
                         <hr class="border-white my-2">
@@ -154,7 +231,7 @@
                         <button id="show-zones-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
                             OPS Zones
                         </button>
-                       
+                        
                     </div>
 
                     <!-- Floaters View -->
@@ -275,7 +352,7 @@
                 <div id="map"></div>
                 <!-- Legends Container -->
                 <div id="legends-container" class="absolute top-4 right-4 space-y-2 z-[1000]">
-                        <!-- Manager Legend -->
+                            <!-- Manager Legend -->
                     <div id="manager-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-1.5 rounded-lg shadow-lg transition-opacity duration-300 border border-gray-700/50">
                         <div id="manager-legend" class="space-y-1">
                             <!-- Legend items will be injected here by JavaScript -->
@@ -963,12 +1040,12 @@
         let mapInitialized = false;
 
         const relieverColors = {
-            "Adham Shaef": "#2980b9",     // Purple
+            "Adham Shaef": "#2980b9",       // Purple
             "Apithany Hayes": "Black", // Green
-            "Eli Walin": "white",     // Blue
-            "Imran Anwar": "green",   // Orange
+            "Eli Walin": "white",       // Blue
+            "Imran Anwar": "green",    // Orange
             "Melaysia Horn": "#c0392b", // Red
-            "Yolanda Perez": "yellow"     // Cyan
+            "Yolanda Perez": "yellow"       // Cyan
         };
         
         const floaterData = {
@@ -1456,10 +1533,10 @@
                         }
                     });
                 } else {
-                     const noOfficerDiv = document.createElement('div');
-                     noOfficerDiv.className = 'p-3 rounded-lg bg-gray-800/50 text-gray-400';
-                     noOfficerDiv.textContent = 'No primary officers found for this site in the provided data.';
-                     officerListContainer.appendChild(noOfficerDiv);
+                       const noOfficerDiv = document.createElement('div');
+                       noOfficerDiv.className = 'p-3 rounded-lg bg-gray-800/50 text-gray-400';
+                       noOfficerDiv.textContent = 'No primary officers found for this site in the provided data.';
+                       officerListContainer.appendChild(noOfficerDiv);
                 }
 
                 if (bounds.length > 1) {
@@ -1852,8 +1929,65 @@
             displayAllSites();
             mapInitialized = true;
         }
+        
+        // --- Loader Animation and App Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const loader = document.getElementById('loader');
+            const appContainer = document.getElementById('app-container');
+            const canvas = document.getElementById('matrix-canvas');
+            const ctx = canvas.getContext('2d');
 
-        document.addEventListener('DOMContentLoaded', initializeMapApplication);
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+            const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const nums = '0123456789';
+            const alphabet = katakana + latin + nums;
+
+            const fontSize = 16;
+            const columns = canvas.width / fontSize;
+            const rainDrops = [];
+
+            for (let x = 0; x < columns; x++) {
+                rainDrops[x] = 1;
+            }
+
+            const drawMatrix = () => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#0F0';
+                ctx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < rainDrops.length; i++) {
+                    const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                    ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                    if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        rainDrops[i] = 0;
+                    }
+                    rainDrops[i]++;
+                }
+            };
+            
+            const matrixInterval = setInterval(drawMatrix, 30);
+
+            // --- App Start Sequence ---
+            setTimeout(() => {
+                loader.classList.add('fade-out');
+                
+                loader.addEventListener('transitionend', () => {
+                    loader.style.display = 'none';
+                    appContainer.classList.remove('hidden');
+                    document.body.style.overflow = ''; // Restore scrolling
+                    document.body.style.backgroundColor = ''; // Restore original body bg
+                    initializeMapApplication();
+                    clearInterval(matrixInterval);
+                }, { once: true });
+
+            }, 2500); // 2.5 second loader display
+        });
     </script>
 </body>
 </html>
