@@ -3,29 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <link rel="icon" type="x/jpeg" href="x.jpeg">
-    <title>Rochak GridVector Matrix</title>
-    
-    <!-- Tailwind CSS for styling -->
+    <title>Call-Off Analysis</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- LeafletJS for the interactive map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Courier Prime', 'Courier New', monospace;
             font-weight: bold;
-            background-color: #000; /* Set body background for seamless loading */
-            overflow: hidden; /* Prevent scrolling during loading */
+            background-color: #000000;
+            color: #e5e7eb;
+            overflow: hidden; /* Prevent scrolling during load */
         }
-        #map { 
-            height: 100vh; 
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            padding: 10px;
+            font-size: 14px;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.2);
+            min-width: 220px;
+        }
+        .axis-label {
+            font-size: 14px;
+            font-weight: bold;
+            fill: #a3e635; /* lime-400 */
+        }
+         .domain, .tick line {
+            stroke: #4b5563;
+        }
+        .tick text {
+            fill: #d1d5db;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        #share-feedback {
+            transition: opacity 0.5s ease-in-out;
+            text-shadow: 0 0 8px #10b981;
+        }
+        .panel {
+             background-color: rgba(10, 15, 25, 0.7);
+             backdrop-filter: blur(4px);
+             border: 1px solid rgba(130, 255, 130, 0.3);
         }
 
         /* --- Loader Styles --- */
@@ -42,12 +66,10 @@
             justify-content: center;
             transition: opacity 0.7s ease-out, visibility 0.7s ease-out;
         }
-
         #loader.fade-out {
             opacity: 0;
             visibility: hidden;
         }
-
         #loader canvas {
             position: absolute;
             top: 0;
@@ -55,1882 +77,105 @@
             width: 100%;
             height: 100%;
         }
-
         .loader-content {
             z-index: 1;
             text-align: center;
             color: #0f0;
             text-shadow: 0 0 10px #0f0, 0 0 20px #0f0;
         }
-
         .loader-title {
             font-size: 2.5rem;
             letter-spacing: 0.2em;
             animation: flicker 1.5s infinite alternate;
         }
-
         .loader-subtitle {
             font-size: 1rem;
             margin-top: 0.5rem;
             animation: flicker 2s infinite alternate;
         }
-
         @keyframes flicker {
             0%, 18%, 22%, 25%, 53%, 57%, 100% {
                 text-shadow:
-                    0 0 4px #0f0,
-                    0 0 11px #0f0,
-                    0 0 19px #0f0,
-                    0 0 40px #0f0,
-                    0 0 80px #0f0,
-                    0 0 90px #0f0,
-                    0 0 100px #0f0,
-                    0 0 150px #0f0;
+                    0 0 4px #0f0, 0 0 11px #0f0, 0 0 19px #0f0,
+                    0 0 40px #0f0, 0 0 80px #0f0, 0 0 90px #0f0,
+                    0 0 100px #0f0, 0 0 150px #0f0;
             }
-            20%, 24%, 55% {        
-                text-shadow: none;
-            }
+            20%, 24%, 55% { text-shadow: none; }
         }
-        /* --- End Loader Styles --- */
-
-        /* Custom scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: grey;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: grey;
-            border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: lime;
-        }
-        /* Numbered route markers */
-        .route-marker-icon {
-            background-color: #ffffff;
-            border: 2px solid #111827; /* gray-900 */
-            color: #111827;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 9999px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        
-        /* UI Panel transitions */
-        .view-panel {
-            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-        }
-        .view-panel.hidden {
-            opacity: 0;
-            transform: translateY(20px);
-            pointer-events: none;
-            position: absolute;
-            width: calc(100% - 1.5rem); /* p-3 is 0.75rem on each side */
-        }
-
-        /* Staggered list animation */
-        @keyframes slide-in-up {
-            from {
-                opacity: 0;
-                transform: translateY(15px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .animate-slide-in-up {
-            animation: slide-in-up 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-            opacity: 0;
-        }
-
-        /* Custom Popup Styles */
-        .custom-popup .leaflet-popup-content-wrapper {
-            background: #1f2937; /* gray-800 */
-            color: #f3f4f6; /* gray-100 */
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
-        .custom-popup .leaflet-popup-tip {
-            background: #1f2937;
-        }
-        .custom-popup .leaflet-popup-content {
-            margin: 12px;
-            line-height: 1.4;
-        }
-        .custom-popup a.leaflet-popup-close-button { 
-            color: #9ca3af !important; /* gray-400 */
-            padding: 8px 8px 0 0;
-        }
-        .popup-button {
-            background-color: white;
-            color: #111827; /* gray-900 */
-            padding: 4px 8px;
-            margin-top: 8px;
-            border-radius: 6px;
-            border: none;
-            box-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s, color 0.2s;
-        }
-        .popup-button:hover {
-            background-color: black;
-            color: white;
-        }
+        #app-container.hidden { display: none; }
 
     </style>
 </head>
-<body class="antialiased text-gray-800">
+<body class="p-4 sm:p-6 md:p-8">
 
     <!-- Hacker Loader -->
     <div id="loader">
         <canvas id="matrix-canvas"></canvas>
         <div class="loader-content">
-            <h1 class="loader-title">ROCHAK GRIDVECTOR</h1>
-            <p class="loader-subtitle">Initializing datas...</p>
+            <h1 class="loader-title">GRIDVECTOR</h1>
+            <p class="loader-subtitle">Initializing data streams...</p>
+        </div>
+    </div>
+    
+    <!-- Access Code Modal -->
+    <div id="password-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center">
+        <div class="panel p-6 rounded-lg text-center">
+            <h3 class="text-lg text-lime-400 mb-4">ACCESS REQUIRED</h3>
+            <p class="text-gray-300 mb-4">Enter access code to upload file.</p>
+            <input type="password" id="password-input" class="bg-gray-900 text-center text-lime-400 font-bold tracking-widest p-2 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-lime-400">
+            <p id="password-error" class="text-red-500 text-xs mt-2 h-4"></p>
+            <button id="password-submit" class="mt-4 bg-lime-400 text-black font-bold py-2 px-6 rounded-lg hover:bg-lime-300">SUBMIT</button>
         </div>
     </div>
 
-    <div id="app-container" class="hidden">
-        <div class="flex flex-col md:flex-row h-screen">
-            <!-- Sidebar -->
-            <aside class="w-full md:w-1/5 lg:w-1/6 bg-gray-900 text-gray-300 shadow-2xl flex flex-col">
-                <div class="p-3 border-b border-gray-700/50">
-                    <h1 class="text-lg text-lime-400 tracking-wider">SF GRIDVECTOR</h1>
-                    <p class="text-[8px] text-lime-400 whitespace-nowrap [text-shadow:0_0_8px_rgba(251,191,36,0.8)]">DEVELOPED BY ROCHAK KADEL</p>
-                </div>
+    <div id="app-container" class="hidden max-w-7xl mx-auto bg-black rounded-xl p-6 border border-gray-800">
+        <div class="flex justify-between items-start mb-2 border-b border-gray-700/50 pb-4">
+            <div>
+                <h1 class="text-xl sm:text-2xl text-lime-400 tracking-wider">CALL-OFF ANALYSIS</h1>
+                <p class="text-[10px] text-lime-400/80 [text-shadow:0_0_8px_rgba(163,230,53,0.8)]">GRIDVECTOR DATA VISUALIZATION</p>
+            </div>
+            <div>
+                <button id="share-button" class="bg-gray-800 text-gray-200 font-bold py-2 px-4 rounded-lg border border-gray-600 hover:border-lime-400 hover:text-white transition-colors duration-300">Share Report</button>
+                <span id="share-feedback" class="ml-4 text-emerald-400 opacity-0">Link Copied!</span>
+            </div>
+        </div>
+        
+        <div class="my-6 flex items-center space-x-4 p-3 panel rounded-lg">
+             <button id="upload-button" class="bg-lime-400 text-black font-bold py-2 px-4 rounded-lg hover:bg-lime-300">UPLOAD NEW CSV</button>
+             <input type="file" id="csv-file-input" accept=".csv" class="hidden">
+        </div>
+
+
+        <div id="visualization-container" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <div id="chart" class="lg:col-span-3 w-full panel p-4 rounded-lg"></div>
+
+            <div id="legend-container" class="lg:col-span-1 panel p-4 rounded-lg">
+                <h3 class="text-base text-lime-400 tracking-wider mb-3 border-b border-gray-700/50 pb-2">LEGEND</h3>
                 
-                <div class="flex-grow p-3 overflow-y-auto custom-scrollbar relative">
-                    <!-- View for initial buttons -->
-                    <div id="initial-view" class="view-panel space-y-2">
-                        <button id="show-site-search-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
-                            Search Sites
-                        </button>
-                        <button id="show-all-officers-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
-                            Track All Officers
-                        </button>
-
-                         <button id="show-floaters-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
-                            Search Floaters
-                        </button>
-                        
-                        <hr class="border-white my-2">
-
-                        <button id="show-relief-routes-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
-                            Break Relief Routes
-                        </button>
-                        <button id="show-cold-starts-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
-                            Cold Starts
-                        </button>
-                        <button id="show-zones-btn" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200">
-                            OPS Zones
-                        </button>
-                        
+                <div class="mb-6">
+                    <h4 class="font-bold text-sm text-gray-300 mb-2">CALL-OFF TYPE</h4>
+                    <div class="flex items-center mb-2">
+                        <div class="w-4 h-4 rounded-sm bg-white mr-3"></div>
+                        <span class="text-sm text-gray-300">Excused</span>
                     </div>
-
-                    <!-- Floaters View -->
-                    <div id="floaters-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-base text-white">Floaters</h2>
-                            <button id="back-from-floaters-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                        </div>
-                        <div id="floaters-list" class="space-y-2">
-                            <!-- Floater buttons will be injected here -->
-                        </div>
-                    </div>
-                    
-                    <!-- Floater Sites View -->
-                    <div id="floater-sites-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 id="floater-name-title" class="text-base text-white"></h2>
-                            <button id="back-to-floaters-list-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                        </div>
-                        <input type="text" id="floater-site-search-input" placeholder="search sites..." class="w-full p-1 text-xs rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
-                        <div id="floater-sites-list" class="space-y-2 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                            <!-- Floater site buttons will be injected here -->
-                        </div>
-                    </div>
-
-                    <!-- Zones View -->
-                    <div id="zones-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-base text-white">OPS Zones</h2>
-                            <button id="back-from-zones-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                        </div>
-                        <div id="zones-list" class="space-y-2">
-                            <!-- Zone buttons will be injected here -->
-                        </div>
-                    </div>
-
-                    <!-- Cold Starts View -->
-                    <div id="cold-starts-view" class="view-panel hidden">
-                        <div id="cold-starts-day-selector">
-                            <div class="flex items-center justify-between mb-2">
-                                <h2 class="text-base text-white">Cold Starts</h2>
-                                <button id="back-from-cold-starts-day-select-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                            </div>
-                            <div class="space-y-2">
-                                <button id="show-weekdays-cold-starts" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Weekdays</button>
-                                <button id="show-saturday-cold-starts" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Saturday</button>
-                                <button id="show-sunday-cold-starts" class="w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200">Sunday</button>
-                            </div>
-                        </div>
-                        <div id="cold-starts-list-container" class="hidden">
-                            <div class="flex items-center justify-between mb-2">
-                                <h2 id="cold-starts-title" class="text-base text-white"></h2>
-                                <button id="back-to-cold-starts-day-select-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                            </div>
-                            <div id="cold-starts-list" class="space-y-2 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                                <!-- Cold start items will be injected here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- All Officers View -->
-                    <div id="all-officers-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-base text-white">All Officers</h2>
-                            <button id="back-from-all-officers-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                        </div>
-                        <input type="text" id="officer-search-input" placeholder="search..." class="w-full p-1 text-xs rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <div id="officer-suggestions" class="mt-2 space-y-2 max-h-96 overflow-y-auto custom-scrollbar"></div>
-                    </div>
-
-                      <!-- View for Site Search -->
-                    <div id="site-search-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-base text-white">Search Site</h2>
-                            <button id="back-to-initial-from-search-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                        </div>
-                        <input type="text" id="site-search-input" placeholder="search..." class="w-full p-1 text-xs rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <div id="site-suggestions" class="mt-2 space-y-2 max-h-96 overflow-y-auto custom-scrollbar"></div>
-                    </div>
-
-                    <!-- View for relief employee list -->
-                    <div id="relief-list-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-base text-white">Relief Staff</h2>
-                            <button id="back-to-initial-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                        </div>
-                        <div id="relief-employee-list" class="space-y-2">
-                            <!-- Employee buttons will be injected here -->
-                        </div>
-                    </div>
-
-                    <!-- Selected Route Information Section -->
-                    <div id="route-info-section" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 id="route-employee-name" class="text-base text-white"></h3>
-                            <button id="back-to-relief-list-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                        </div>
-                        <div id="route-schedule" class="space-y-2">
-                            <!-- Schedule details will be injected here -->
-                        </div>
-                    </div>
-
-                    <!-- Officers at Site View -->
-                    <div id="officer-list-view" class="view-panel hidden">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 id="officer-site-name" class="text-base text-white"></h3>
-                            <button id="back-to-site-search-btn" class="text-xs text-blue-400 hover:text-blue-300 transition">Back</button>
-                        </div>
-                        <div id="officer-list" class="space-y-2">
-                              <!-- Officer details will be injected here -->
-                        </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-sm bg-gray-600 mr-3"></div>
+                        <span class="text-sm text-gray-300">Unexcused</span>
                     </div>
                 </div>
-            </aside>
 
-            <!-- Map container -->
-            <main class="w-full md:w-4/5 lg:w-5/6 relative">
-                <div id="map"></div>
-                <!-- Legends Container -->
-                <div id="legends-container" class="absolute top-4 right-4 space-y-2 z-[1000]">
-                            <!-- Manager Legend -->
-                    <div id="manager-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-1.5 rounded-lg shadow-lg transition-opacity duration-300 border border-gray-700/50">
-                        <div id="manager-legend" class="space-y-1">
-                            <!-- Legend items will be injected here by JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- Relief Site Legend -->
-                    <div id="relief-legend-container" class="bg-gray-900/70 backdrop-blur-sm text-gray-200 p-1.5 rounded-lg shadow-lg transition-opacity duration-300 hidden max-h-[70vh] overflow-y-auto custom-scrollbar border border-gray-700/50">
-                        <div id="relief-legend-list" class="space-y-1">
-                            <!-- Relief site legend items will be injected here -->
-                        </div>
-                    </div>
+                <div class="mb-6">
+                    <h4 class="font-bold text-sm text-gray-300 mb-2">SUPERVISOR</h4>
+                    <div id="supervisor-legend" class="space-y-2"></div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
+    
+    <div id="tooltip" class="tooltip"></div>
 
     <script>
-        // --- DATA STRUCTURES --- //
-        const managerColors = {
-            "Doug Fletcher": "white", // Blue
-            "Jason Daugherty": "yellow", // Orange
-            "Aldo Diaz": "#22c55e", // Green
-            "Mohamed Ezzat": "red", // Red
-            "Inderprit Gill": "#8b5cf6"  // Violet
-        };
-
-        const sites = {
-            "Doug Fletcher": [
-                { name: "The Contemporary Jewish Museum", address: "736 Mission St", lat: 37.7857, lng: -122.4042 },
-                { name: "JLL - 600 California St", address: "600 California St", lat: 37.7925, lng: -122.4024 },
-                { name: "JLL - 120 Kearny St (PMC)", address: "120 Kearny St", lat: 37.7892, lng: -122.4040 }
-            ],
-            "Jason Daugherty": [
-                { name: "CBRE - 1128 Market St", address: "1128 Market St", lat: 37.7788, lng: -122.4132 },
-                { name: "The Potrero Power Station", address: "420 23rd St", lat: 37.7570, lng: -122.3850 },
-                { name: "Sutro Tower, Inc", address: "1 La Avanzada St", lat: 37.7552, lng: -122.4528 },
-                { name: "CBRE - 500 Howard St", address: "500 Howard St", lat: 37.7876, lng: -122.3958 },
-                { name: "CBRE - 500 Pine", address: "500 Pine St", lat: 37.7915, lng: -122.4029 },
-                { name: "AJ Capital Partners", address: "1800 Mission St", lat: 37.7675, lng: -122.4196 },
-                { name: "Dalum Corporation", address: "130 Battery St", lat: 37.7942, lng: -122.3992 },
-                { name: "Sequoias", address: "1400 Geary Blvd", lat: 37.7852, lng: -122.4300 },
-                { name: "JLL - 300 Kansas St", address: "300 Kansas St", lat: 37.7676, lng: -122.4045 },
-                { name: "Swig - 633 Folsom St", address: "633 Folsom St", lat: 37.7836, lng: -122.3973 },
-                { name: "Swig - 501 2nd St", address: "501 2nd St", lat: 37.7845, lng: -122.3912 },
-                { name: "Doublewood Investment", address: "111 Pine St", lat: 37.7932, lng: -122.4000 },
-                { name: "Novva", address: "400 Paul Ave", lat: 37.7228, lng: -122.4209 },
-                { name: "633 Folsom", address: "633 Folsom St", lat: 37.7836, lng: -122.3973 },
-                { name: "1 Kearny", address: "1 Kearny St", lat: 37.7877, lng: -122.4043 },
-                { name: "1200 Van Ness", address: "1200 Van Ness Ave", lat: 37.7865, lng: -122.4217 }
-            ],
-            "Aldo Diaz": [
-                { name: "181 Fremont Street", address: "181 Fremont St", lat: 37.7895, lng: -122.3950 },
-                { name: "Harvest - 274 Brannan St", address: "274 Brannan St", lat: 37.7820, lng: -122.3908 },
-                { name: "Harvest - 360 Spear St", address: "360 Spear St", lat: 37.7861, lng: -122.3908 },
-                { name: "Tavaco - 1035 Market St", address: "1035 Market St", lat: 37.7806, lng: -122.4105 },
-                { name: "JLL - 150 Spear St", address: "150 Spear St", lat: 37.7909, lng: -122.3941 },
-                { name: "RREG - 750 Battery Corp.", address: "750 Battery St", lat: 37.7984, lng: -122.4011 },
-                { name: "Tusker Corporation", address: "1635 Divisadero St", lat: 37.7844, lng: -122.4400 },
-                { name: "Van Barton - 115 Sansome", address: "115 Sansome St", lat: 37.7920, lng: -122.4010 },
-                { name: "CBRE - 180 Montgomery", address: "180 Montgomery St", lat: 37.7895, lng: -122.4030 },
-                { name: "Swig - 220 Montgomery St", address: "220 Montgomery St", lat: 37.7901, lng: -122.4027 },
-                { name: "ECP - 601 California St", address: "601 California St", lat: 37.7925, lng: -122.4032 },
-                { name: "EPA - 711 Eddy St", address: "711 Eddy St", lat: 37.7828, lng: -122.4208 },
-                { name: "WPA - 1280 Laguna", address: "1280 Laguna St", lat: 37.7849, lng: -122.4293 },
-                { name: "CW - 71 Stevenson St", address: "71 Stevenson St", lat: 37.7885, lng: -122.3995 }
-            ],
-            "Mohamed Ezzat": [
-                { name: "Colliers - 153 Kearny St", address: "153 Kearny St", lat: 37.7896, lng: -122.4042 },
-                { name: "JLL - 110 Sutter", address: "110 Sutter St", lat: 37.7903, lng: -122.4037 },
-                { name: "Colliers - 240 Stockton St", address: "240 Stockton St", lat: 37.7881, lng: -122.4069 },
-                { name: "Colliers - 26 O'Farrell St", address: "26 O'Farrell St", lat: 37.7871, lng: -122.4065 },
-                { name: "G&G Partners", address: "30 Grant Ave", lat: 37.7877, lng: -122.4055 },
-                { name: "YCS Investments", address: "170 Maiden Lane", lat: 37.7885, lng: -122.4053 },
-                { name: "Olympic Club Lakeside", address: "599 Skyline Blvd", lat: 37.7214, lng: -122.4960 },
-                { name: "CW - 456 Montgomery St", address: "456 Montgomery St", lat: 37.7927, lng: -122.4031 },
-                { name: "Colliers - 717 Market St", address: "717 Market St", lat: 37.7869, lng: -122.4039 },
-                { name: "JLL - 201 Mission St", address: "201 Mission St", lat: 37.7915, lng: -122.3947 },
-                { name: "Van Barton - 101 Mission", address: "101 Mission St", lat: 37.7927, lng: -122.3951 },
-                { name: "Van Barton - 100 Montgomery", address: "100 Montgomery St", lat: 37.7890, lng: -122.4032 },
-                { name: "Colliers - 166 Geary", address: "166 Geary St", lat: 37.7883, lng: -122.4061 }
-            ],
-            "Inderprit Gill": [
-                { name: "Seligman - 311 California St", address: "311 California St", lat: 37.7931, lng: -122.4005 },
-                { name: "JKL Corporation", address: "90 New Montgomery St", lat: 37.7869, lng: -122.4009 },
-                { name: "Seligman - 785 Market St", address: "785 Market St", lat: 37.7860, lng: -122.4047 },
-                { name: "Metrovation", address: "230 California St", lat: 37.7937, lng: -122.3991 },
-                { name: "JLL - 101 Montgomery St", address: "101 Montgomery St", lat: 37.7890, lng: -122.4032 },
-                { name: "JLL - 425 California St", address: "425 California St", lat: 37.7935, lng: -122.4019 },
-                { name: "Transwestern - 210 Post St", address: "210 Post St", lat: 37.7887, lng: -122.4063 },
-                { name: "Seaker & Sons", address: "30 Maiden Lane", lat: 37.7880, lng: -122.4057 },
-                { name: "Flynn Properties", address: "222 Kearny St", lat: 37.7903, lng: -122.4043 },
-                { name: "TMG LLC - 150 Post St", address: "150 Post St", lat: 37.7891, lng: -122.4054 },
-                { name: "Transwestern - 1019 Market St", address: "1019 Market St", lat: 37.7812, lng: -122.4100 },
-                { name: "CW - 425 Market St", address: "425 Market St", lat: 37.7920, lng: -122.3971 }
-            ]
-        };
-        
-        const breakReliefs = {
-            "Yolanda Perez": {
-                schedule: [
-                    { locationName: "90 New Montgomery St", startTime: "8:30", endTime: "8:45" },
-                    { locationName: "71 Stevenson St", startTime: "8:50", endTime: "9:05" },
-                    { locationName: "30 Grant Ave", startTime: "9:15", endTime: "9:30" },
-                    { locationName: "Break", startTime: "9:30", endTime: "10:00", isBreak: true },
-                    { locationName: "1019 Market St", startTime: "10:00", endTime: "10:15" },
-                    { locationName: "90 New Montgomery St", startTime: "10:45", endTime: "11:00" },
-                    { locationName: "30 Grant Ave", startTime: "11:15", endTime: "11:45" },
-                    { locationName: "71 Stevenson St", startTime: "12:00", endTime: "12:15" },
-                    { locationName: "1019 Market St", startTime: "12:45", endTime: "13:00" },
-                    { locationName: "30 Grant Ave", startTime: "13:15", endTime: "13:30" }
-                ]
-            },
-             "Apithany Hayes": { 
-                schedule: [
-                    { locationName: "101 Montgomery St", startTime: "9:00", endTime: "9:15" },
-                    { locationName: "425 California St", startTime: "9:25", endTime: "9:40" },
-                    { locationName: "153 Kearny St", startTime: "9:50", endTime: "10:05" },
-                    { locationName: "Break", startTime: "10:05", endTime: "10:20", isBreak: true },
-                    { locationName: "101 Montgomery St", startTime: "10:45", endTime: "11:15" },
-                    { locationName: "425 California St", startTime: "11:25", endTime: "11:55" },
-                    { locationName: "153 Kearny St", startTime: "12:05", endTime: "12:35" },
-                    { locationName: "150 Post St", startTime: "12:40", endTime: "13:40" },
-                    { locationName: "Lunch", startTime: "13:45", endTime: "14:15", isBreak: true },
-                    { locationName: "101 Montgomery St", startTime: "14:15", endTime: "14:30" },
-                    { locationName: "425 California St", startTime: "14:40", endTime: "14:55" },
-                    { locationName: "153 Kearny St", startTime: "15:05", endTime: "15:20" }
-                ]
-            },
-            "Imran Anwar": {
-                schedule: [
-                    { locationName: "210 Post St", startTime: "9:00", endTime: "9:15" },
-                    { locationName: "30 Maiden Lane", startTime: "9:30", endTime: "9:45" },
-                    { locationName: "Break", startTime: "9:45", endTime: "10:15", isBreak: true },
-                    { locationName: "210 Post St", startTime: "10:15", endTime: "10:45" },
-                    { locationName: "111 Pine St", startTime: "11:00", endTime: "11:30" },
-                    { locationName: "30 Maiden Lane", startTime: "11:45", endTime: "12:15" },
-                    { locationName: "210 Post St", startTime: "12:30", endTime: "12:45" },
-                    { locationName: "30 Maiden Lane", startTime: "13:00", endTime: "13:15" }
-                ]
-            },
-            "Eli Walin": {
-                schedule: [
-                    { locationName: "750 Battery St", startTime: "9:00", endTime: "9:15" },
-                    { locationName: "222 Kearny St", startTime: "9:35", endTime: "9:50" },
-                    { locationName: "Break", startTime: "9:50", endTime: "10:45", isBreak: true },
-                    { locationName: "750 Battery St", startTime: "10:45", endTime: "11:15" },
-                    { locationName: "222 Kearny St", startTime: "11:45", endTime: "12:15" },
-                    { locationName: "750 Battery St", startTime: "12:35", endTime: "12:50" },
-                    { locationName: "222 Kearny St", startTime: "13:15", endTime: "13:30" },
-                    { locationName: "230 California St", startTime: "15:00", endTime: "19:00" }
-                ]
-            },
-            "Melaysia Horn": {
-                schedule: [
-                    { locationName: "101 Mission", startTime: "8:30", endTime: "8:45" },
-                    { locationName: "110 Sutter", startTime: "9:00", endTime: "9:15" },
-                    { locationName: "26 O'Farrell St", startTime: "9:25", endTime: "9:40" },
-                    { locationName: "101 Mission", startTime: "10:30", endTime: "11:00" },
-                    { locationName: "110 Sutter", startTime: "11:15", endTime: "11:45" },
-                    { locationName: "26 O'Farrell St", startTime: "11:55", endTime: "12:25" },
-                    { locationName: "Lunch", startTime: "12:25", endTime: "13:00", isBreak: true },
-                    { locationName: "101 Mission", startTime: "13:00", endTime: "13:15" },
-                    { locationName: "110 Sutter", startTime: "13:30", endTime: "13:45" },
-                    { locationName: "1 Kearny", startTime: "13:55", endTime: "14:25" },
-                    { locationName: "26 O'Farrell St", startTime: "14:30", endTime: "14:45" }
-                ]
-            },
-            "Adham Shaef": {
-                schedule: [
-                    { locationName: "115 Sansome", startTime: "7:00", endTime: "7:15" },
-                    { locationName: "240 Stockton St", startTime: "7:30", endTime: "7:45" },
-                    { locationName: "717 Market St", startTime: "8:00", endTime: "8:15" },
-                    { locationName: "500 Pine", startTime: "8:30", endTime: "8:45" },
-                    { locationName: "Lunch", startTime: "8:45", endTime: "9:15", isBreak: true },
-                    { locationName: "115 Sansome", startTime: "9:15", endTime: "9:45" },
-                    { locationName: "240 Stockton St", startTime: "10:00", endTime: "10:30" },
-                    { locationName: "717 Market St", startTime: "10:40", endTime: "11:10" },
-                    { locationName: "500 Pine", startTime: "11:25", endTime: "11:55" },
-                    { locationName: "Break", startTime: "11:55", endTime: "12:25", isBreak: true },
-                    { locationName: "115 Sansome", startTime: "12:25", endTime: "12:40" },
-                    { locationName: "240 Stockton St", startTime: "12:55", endTime: "13:10" },
-                    { locationName: "500 Pine", startTime: "13:20", endTime: "13:35" },
-                    { locationName: "717 Market St", startTime: "13:45", endTime: "14:00" }
-                ]
-            }
-        };
-
-        const coldStartsWeekdays = [
-            { time: 530, site: "1635 Divisadero", officer: "Raul Rebadulla" },
-            { time: 600, site: "115 Sansome", officer: "Burt Amaral" },
-            { time: 600, site: "170 Maiden Lane", officer: "Sherina Owens" },
-            { time: 630, site: "90 New Montgomery", officer: "Michael Castillo" },
-            { time: 645, site: "240 Stockton", officer: "Lorenzo Hudson" },
-            { time: 645, site: "300 Kansas", officer: "Andrew Olivarez" },
-            { time: 700, site: "210 Post", officer: "Samuel Cantu" },
-            { time: 700, site: "30 Maiden Lane", officer: "Domariae Williams" },
-            { time: 700, site: "230 California", officer: "Alexander Lewis" },
-            { time: 730, site: "360 Spear", officer: "Lorenzo Hawkins" },
-            { time: 730, site: "110 Sutter", officer: "Timothy Paliani" },
-            { time: 800, site: "150 Post", officer: "Kimberly Hale" },
-            { time: 800, site: "311 California", officer: "Reynard Harden" },
-            { time: 800, site: "1128 Market", officer: "Jamal Malih" },
-            { time: 800, site: "500 Pine", officer: "Taliyah Cole" },
-            { time: 830, site: "785 Market", officer: "Sheldon Coulon" },
-            { time: 830, site: "1035 Market", officer: "Cellouse Ham" },
-            { time: 830, site: "26 O'Farrell", officer: "Janice Inarda-Shield" },
-            { time: 830, site: "153 Kearny", officer: "Abraham Tesfagiorgis" },
-            { time: 830, site: "274 Brannan", officer: "Ezequiel Frau" },
-            { time: 900, site: "130 Battery", officer: "Aaron Woodworth" },
-            { time: 900, site: "1 Kearny", officer: "Michael Jones" },
-            { time: 1000, site: "166 Geary", officer: "Boris Korentsvit" },
-        ];
-
-        const coldStartsSaturday = [
-            { time: 730, site: "1635 Divisadero St.", officer: "Danilo Andrey" },
-            { time: 800, site: "170 Maiden Lane", officer: "Michael Ziganti" },
-            { time: 900, site: "210 Post St.", officer: "Myint Maung" },
-            { time: 900, site: "240 Stockton St.", officer: "Marian Perez" },
-            { time: 1630, site: "115 Sansome St.", officer: "Stanley Moumolua" }
-        ];
-
-        const coldStartsSunday = [
-            { time: 800, site: "170 Maiden Lane", officer: "Michael Ziganti" },
-            { time: 815, site: "1635 Divisadero St.", officer: "Danilo Andrey" },
-            { time: 1100, site: "210 Post St.", officer: "Myint Maung" },
-            { time: 1630, site: "115 Sansome St.", officer: "Stanley Moumolua" }
-        ];
-
-        const opsZones = {
-            "Zone 1": ["1 Kearny St.", "26 O'Farrell", "30 Grant Ave.", "30 Maiden Lane", "110 Sutter St.", "120 Kearny St.", "150 Post St.", "153 Kearny St.", "166 Geary Blvd.", "170 Maiden Lane", "210 Post St.", "240 Stockton", "222 Kearny St.", "456 Montgomery St.", "500 Pine St.", "600 California St.", "601 California St."],
-            "Zone 2": ["100 Montgomery St.", "101 Montgomery St.", "111 Pine St.", "115 Sansome St.", "130 Battery St.", "180 Montgomery St.", "220 Montgomery St.", "230 California St.", "311 California", "425 California St", "750 Battery St."],
-            "Zone 3": ["71 Stevenson St.", "101 Mission St.", "150 Spear St.", "181 Fremont", "201 Mission St.", "274 Brannan St.", "360 Spear St.", "425 Market St.", "500 Howard St.", "501 2nd St."],
-            "Zone 4": ["90 New Montgomery St.", "633 Folsom St.", "717 Market St.", "736 Mission St.", "785 Market St.", "1019 Market St.", "1035 Market St.", "1035 Howard St.", "1128 Market St."],
-            "Zone 5": ["1 La Avanzada St.", "300 Kansas St.", "400 Paul Ave.", "420 23rd St.", "599 Skyline Blvd.", "711 Eddy St.", "945 Bryant St.", "1200 Van Ness Ave.", "1280 Laguna St.", "1400 Geary Blvd.", "1635 Divisadero St.", "1800 Mission St."]
-        };
-        
-        const officers = [
-            { "firstName": "Aziz", "lastName": "Chakib", "homeAddress": "805 Leavenworth St Apt 501, CA, 94109-6123", "jobAddress": "500 Howard St", "homeLat": 37.7889, "homeLng": -122.4154 },
-            { "firstName": "Calvin", "lastName": "Horton", "homeAddress": "2120 Railroad Ave Ste 103, CA, 94565-4880", "jobAddress": "180 Montgomery St Ste 1650", "homeLat": 37.973, "homeLng": -122.036 },
-            { "firstName": "Axel", "lastName": "Garcia Ramirez", "homeAddress": "4065 Lyon Ave Apt 2, Ca, 94601-3864", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.7788, "homeLng": -122.2214 },
-            { "firstName": "Fred", "lastName": "Bess Jr", "homeAddress": "794 Button Ave # E21, CA, 95336-9509", "jobAddress": "181 Fremont St", "homeLat": 37.8175, "homeLng": -121.218 },
-            { "firstName": "Liam", "lastName": "Yurman", "homeAddress": "1360 E 7th St, CA, 94510-3587", "jobAddress": "120 Kearny St", "homeLat": 38.0195, "homeLng": -122.2268 },
-            { "firstName": "Rashad", "lastName": "Hussin", "homeAddress": "626 22nd Ave, CA, 94121-3703", "jobAddress": "150 Spear St Ste 775", "homeLat": 37.7777, "homeLng": -122.4818 },
-            { "firstName": "April", "lastName": "Johnson", "homeAddress": "637 Laguna St, CA, 94102", "jobAddress": "150 Spear St Ste 775", "homeLat": 37.7766, "homeLng": -122.4262 },
-            { "firstName": "Maryann", "lastName": "Fillari", "homeAddress": "16401 San Pablo Ave Spc 441, CA, 94806-1330", "jobAddress": "150 Spear St Ste 775", "homeLat": 37.9427, "homeLng": -122.3392 },
-            { "firstName": "Paul", "lastName": "Kramlich", "homeAddress": "725 Washington Ave Apt A, CA, 94706-1034", "jobAddress": "120 Kearny St", "homeLat": 37.8601, "homeLng": -122.268 },
-            { "firstName": "Karmen", "lastName": "Lindsey", "homeAddress": "16001 Liberty St Apt 104, CA, 94578-2133", "jobAddress": "456 Montgomery St", "homeLat": 37.6834, "homeLng": -122.1062 },
-            { "firstName": "Jerome", "lastName": "Griffin", "homeAddress": "291 10th St, CA, 94103-3810", "jobAddress": "717 Market St", "homeLat": 37.7744, "homeLng": -122.4151 },
-            { "firstName": "John", "lastName": "Dockus", "homeAddress": "1618 Lombard St Apt 2, CA, 94123-3023", "jobAddress": "425 Market St", "homeLat": 37.8016, "homeLng": -122.4285 },
-            { "firstName": "Basem", "lastName": "Abdalla", "homeAddress": "1070 Bridgeview Way Apt 1606, CA, 94158-0018", "jobAddress": "181 Fremont St", "homeLat": 37.8385, "homeLng": -122.2854 },
-            { "firstName": "Edgardo", "lastName": "Diala", "homeAddress": "34 Hillview Ct, CA, 94015-4505", "jobAddress": "120 Kearny St", "homeLat": 37.632, "homeLng": -122.4336 },
-            { "firstName": "Twanisha", "lastName": "Brown", "homeAddress": "2644 35th Ave Apt A, CA, 94619-1049", "jobAddress": "1400 Geary Blvd", "homeLat": 37.747, "homeLng": -122.1868 },
-            { "firstName": "Mokrane", "lastName": "Chemakh", "homeAddress": "1540 Jackson St Apt 302, CA, 94612-4475", "jobAddress": "220 Montgomery St", "homeLat": 37.8087, "homeLng": -122.2608 },
-            { "firstName": "Adrian", "lastName": "Gutter", "homeAddress": "244 Rodeo Ave Apt 3, CA, 94572-1115", "jobAddress": "71 Stevenson St Ste 1440", "homeLat": 37.9897, "homeLng": -122.3591 },
-            { "firstName": "Danilo", "lastName": "Andrey", "homeAddress": "50 Rizal St Apt 703, CA, 94107-1204", "jobAddress": "1635 Divisadero St", "homeLat": 37.7728, "homeLng": -122.3995 },
-            { "firstName": "Valente", "lastName": "Banez", "homeAddress": "88 Perry St Apt 535, CA, 94107-1359", "jobAddress": "201 Mission St", "homeLat": 37.7828, "homeLng": -122.3916 },
-            { "firstName": "Jeffrey", "lastName": "McHenry", "homeAddress": "419 Faxon Ave Apt B, CA, 94112-1711", "jobAddress": "1800 Mission St", "homeLat": 37.728, "homeLng": -122.4619 },
-            { "firstName": "Eric", "lastName": "Rodriguez", "homeAddress": "460 37th St, CA, 94805-2134", "jobAddress": "120 Kearny St", "homeLat": 37.9515, "homeLng": -122.3332 },
-            { "firstName": "John", "lastName": "Cliffe", "homeAddress": "2443 Fillmore St Apt 127, CA, 94115-1814", "jobAddress": "1400 Geary Blvd", "homeLat": 37.791, "homeLng": -122.4348 },
-            { "firstName": "James", "lastName": "Mann", "homeAddress": "225 Clifton St Apt 204, CA, 94618-1465", "jobAddress": "7677 Oakport St", "homeLat": 37.8384, "homeLng": -122.2687 },
-            { "firstName": "Rufus", "lastName": "Watkins", "homeAddress": "2060 Ofarrell St Apt 102, CA, 94115-3410", "jobAddress": "425 California St", "homeLat": 37.7844, "homeLng": -122.4419 },
-            { "firstName": "Samson", "lastName": "Abraha", "homeAddress": "2911 Myrtle St, CA, 94608-4524", "jobAddress": "1800 Mission St", "homeLat": 37.8202, "homeLng": -122.2789 },
-            { "firstName": "Victor", "lastName": "Aceves-Beltran", "homeAddress": "1359 Sacramento St Apt A3, CA, 94109-4265", "jobAddress": "71 Stevenson St Ste 1440", "homeLat": 37.7919, "homeLng": -122.4158 },
-            { "firstName": "Abraham", "lastName": "Agtarap", "homeAddress": "1881 46th Ave, CA, 94122-3913", "jobAddress": "55 Hawthorne St", "homeLat": 37.7552, "homeLng": -122.5056 },
-            { "firstName": "Angel", "lastName": "Aguilar", "homeAddress": "88 Perry St Apt 634, CA, 94107-1380", "jobAddress": "500 Howard St", "homeLat": 37.7828, "homeLng": -122.3916 },
-            { "firstName": "Sola", "lastName": "Aina", "homeAddress": "2019 High St Apt 4, CA, 94601-4606", "jobAddress": "166 Geary Street", "homeLat": 37.7656, "homeLng": -122.2154 },
-            { "firstName": "Burt", "lastName": "Amaral", "homeAddress": "3953 Mission Way, CA, 94578-4308", "jobAddress": "115 Sansome St", "homeLat": 37.6627, "homeLng": -122.0722 },
-            { "firstName": "Andre", "lastName": "Paloma", "homeAddress": "70 Oaklawn Dr apt 4, CA, 94015-3000", "jobAddress": "599 Skyline Blvd", "homeLat": 37.6366, "homeLng": -122.4578 },
-            { "firstName": "Imran", "lastName": "Anwar", "homeAddress": "775 Post St Apt 109, CA, 94109-6186", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.788, "homeLng": -122.4144 },
-            { "firstName": "Apolinario", "lastName": "Balbin", "homeAddress": "50 Ward Ct Apt 9, CA, 94015-4142", "jobAddress": "181 Fremont St", "homeLat": 37.6259, "homeLng": -122.4332 },
-            { "firstName": "Louis", "lastName": "Balestier", "homeAddress": "22628 Valley View Dr, CA, 94541-3537", "jobAddress": "425 Market St", "homeLat": 37.6896, "homeLng": -122.0766 },
-            { "firstName": "Quentae", "lastName": "Batiste", "homeAddress": "1094 Ridgewood Dr, CA, 94030-1025", "jobAddress": "425 Market St", "homeLat": 37.5614, "homeLng": -122.3486 },
-            { "firstName": "Tenard", "lastName": "Bautista", "homeAddress": "276 Verano Dr, CA, 94015-2168", "jobAddress": "425 California St", "homeLat": 37.6521, "homeLng": -122.4497 },
-            { "firstName": "Ivory", "lastName": "Bennett", "homeAddress": "2776 Jo Ann Dr, CA, 94806-2715", "jobAddress": "600 California St", "homeLat": 37.9622, "homeLng": -122.3218 },
-            { "firstName": "Raoof", "lastName": "Bhat", "homeAddress": "825 Bush St Apt 506, CA, 94108-3351", "jobAddress": "201 Mission St", "homeLat": 37.7901, "homeLng": -122.4116 },
-            { "firstName": "Matthew", "lastName": "Brown", "homeAddress": "1604 San Leandro Blvd Unit 505, CA, 94577-4673", "jobAddress": "220 Montgomery St", "homeLat": 37.7141, "homeLng": -122.1645 },
-            { "firstName": "Serinia", "lastName": "Brown", "homeAddress": "3574 E 18th St Apt 107, CA, 94509-7477", "jobAddress": "120 Kearny St", "homeLat": 37.9582, "homeLng": -121.9904 },
-            { "firstName": "Cassandra", "lastName": "Bunton", "homeAddress": "579 Valencia St Apt 1, CA, 94110-1162", "jobAddress": "181 Fremont St", "homeLat": 37.7628, "homeLng": -122.4222 },
-            { "firstName": "Samuel", "lastName": "Cantu Jr", "homeAddress": "3121 Cochise Way, CA, 94588-4006", "jobAddress": "210 Post St", "homeLat": 37.747, "homeLng": -121.9056 },
-            { "firstName": "Miguel", "lastName": "Cardenas", "homeAddress": "5080 Mesa Ridge Dr, CA, 94531-8011", "jobAddress": "181 Fremont St", "homeLat": 37.9255, "homeLng": -121.9213 },
-            { "firstName": "Michael", "lastName": "Castillo", "homeAddress": "1137 Langlie Way, CA, 94572-1910", "jobAddress": "90 New Montgomery St", "homeLat": 37.9818, "homeLng": -122.3482 },
-            { "firstName": "Ali", "lastName": "Chakib", "homeAddress": "16 Camelback Ct # 16, CA, 94523-1330", "jobAddress": "750 Battery St", "homeLat": 37.9812, "homeLng": -122.0622 },
-            { "firstName": "Hung", "lastName": "Chan", "homeAddress": "38 Williar Ave, CA, 94112-2306", "jobAddress": "30 Grant Ave", "homeLat": 37.7161, "homeLng": -122.4503 },
-            { "firstName": "Rachid", "lastName": "Chengly", "homeAddress": "189 Elder Ave, CA, 94030-2426", "jobAddress": "111 Pine St", "homeLat": 37.545, "homeLng": -122.3533 },
-            { "firstName": "David", "lastName": "Chong", "homeAddress": "447 Joost Ave, CA, 94127-2405", "jobAddress": "601 California St", "homeLat": 37.7381, "homeLng": -122.4475 },
-            { "firstName": "Sheldon", "lastName": "Coulon", "homeAddress": "114 Arcangel Way, CA, 94806-5066", "jobAddress": "785 Market St", "homeLat": 37.9547, "homeLng": -122.352 },
-            { "firstName": "Joseph", "lastName": "Crowley", "homeAddress": "780 Halie Ct, CA, 95973-0449", "jobAddress": "456 Montgomery St", "homeLat": 39.4627, "homeLng": -121.6111 },
-            { "firstName": "Regginal", "lastName": "Curry", "homeAddress": "1700 E 14th St, CA, 94577-4803", "jobAddress": "101 Montgomery St", "homeLat": 37.7118, "homeLng": -122.1583 },
-            { "firstName": "Santos", "lastName": "Dalere", "homeAddress": "840 Chenery St, CA, 94131-2909", "jobAddress": "120 Kearny St", "homeLat": 37.7347, "homeLng": -122.4348 },
-            { "firstName": "Jamikia", "lastName": "Davis", "homeAddress": "160 14th St Apt 402, CA, 94612-4361", "jobAddress": "425 Market St", "homeLat": 37.8005, "homeLng": -122.2687 },
-            { "firstName": "Johnny", "lastName": "Denham", "homeAddress": "1288 Mission St Apt 306, CA, 94103-2722", "jobAddress": "1019 Market St", "homeLat": 37.7766, "homeLng": -122.4172 },
-            { "firstName": "Jason", "lastName": "Deschain", "homeAddress": "3341 Los Prados St Apt 1, CA, 94403-3033", "jobAddress": "71 Stevenson St Ste 1440", "homeLat": 37.5401, "homeLng": -122.3025 },
-            { "firstName": "Dana", "lastName": "Dorham", "homeAddress": "1619 Chestnut St, CA, 94702-1429", "jobAddress": "425 Market St", "homeLat": 37.8631, "homeLng": -122.2855 },
-            { "firstName": "Marcia", "lastName": "Duncan", "homeAddress": "55 Valle Vista Ave Apt 708, CA, 94590-3140", "jobAddress": "425 Market St", "homeLat": 37.9333, "homeLng": -122.3615 },
-            { "firstName": "Deborah", "lastName": "Edwards-Rhodman", "homeAddress": "1013 Syracuse Cir, CA, 95687-4671", "jobAddress": "501 2nd St", "homeLat": 38.356, "homeLng": -121.9961 },
-            { "firstName": "William", "lastName": "Elrod", "homeAddress": "470 Noor Ave Ste B apt 1017, CA, 94080-5929", "jobAddress": "120 Kearny St", "homeLat": 37.4916, "homeLng": -122.4789 },
-            { "firstName": "Tadesse", "lastName": "Eshete", "homeAddress": "351 Turk St Apt 1115, CA, 94102-3767", "jobAddress": "101 Mission St", "homeLat": 37.7831, "homeLng": -122.4149 },
-            { "firstName": "Rickey", "lastName": "Fairley", "homeAddress": "1548 Quesada Ave, CA, 94124-2772", "jobAddress": "71 Stevenson St Ste 1440", "homeLat": 37.7368, "homeLng": -122.3871 },
-            { "firstName": "Wonde", "lastName": "Fanta", "homeAddress": "88 Perry st Apt 204, CA, 94107-1352", "jobAddress": "750 Battery St", "homeLat": 37.7828, "homeLng": -122.3916 },
-            { "firstName": "Shaikh", "lastName": "Fayyaz", "homeAddress": "1080 Vasconcellos Ave, CA, 95336-8812", "jobAddress": "201 Mission St", "homeLat": 37.8285, "homeLng": -121.2464 },
-            { "firstName": "Alexander", "lastName": "Ferber", "homeAddress": "729 Jones St Apt 306, CA, 94109-6422", "jobAddress": "101 Mission St", "homeLat": 37.7877, "homeLng": -122.4137 },
-            { "firstName": "Lloyd", "lastName": "Fishback", "homeAddress": "678 24th Ave, CA, 94121-2911", "jobAddress": "1400 Geary Blvd", "homeLat": 37.777, "homeLng": -122.4842 },
-            { "firstName": "Ezequiel", "lastName": "Frau", "homeAddress": "311 W 12th St, CA, 95376-3401", "jobAddress": "274 Brannan St", "homeLat": 37.6625, "homeLng": -121.2858 },
-            { "firstName": "Dean", "lastName": "Galamay", "homeAddress": "1420 Gateview Ct Unit 1420D, CA, 94130-1228", "jobAddress": "222 Kearny St", "homeLat": 37.8183, "homeLng": -122.3601 },
-            { "firstName": "Jermaine", "lastName": "Gardner", "homeAddress": "1135 Steiner St Apt 105, CA, 94115-4627", "jobAddress": "181 Fremont St", "homeLat": 37.7788, "homeLng": -122.4331 },
-            { "firstName": "Stephen", "lastName": "Gibney", "homeAddress": "1233 S Mayfair Ave, CA, 94015-3655", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.6698, "homeLng": -122.4646 },
-            { "firstName": "Jacqueline", "lastName": "Gomez", "homeAddress": "9889 Empire Rd, CA, 94603-2001", "jobAddress": "600 California St", "homeLat": 37.7289, "homeLng": -122.1894 },
-            { "firstName": "Michael", "lastName": "Gorman", "homeAddress": "4822 Lodi Way, CA, 94546-2308", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.6434, "homeLng": -122.0917 },
-            { "firstName": "Sherri", "lastName": "Grant", "homeAddress": "208 Darley Dr, CA, 94591-8501", "jobAddress": "1280 Laguna St", "homeLat": 38.1065, "homeLng": -122.213 },
-            { "firstName": "Demello", "lastName": "Grosse", "homeAddress": "7633 22nd St, CA, 95832-1232", "jobAddress": "717 Market St", "homeLat": 38.4844, "homeLng": -121.517 },
-            { "firstName": "Alexis", "lastName": "Guillen", "homeAddress": "259 Frankfort St, CA, 94014-1316", "jobAddress": "120 Kearny St", "homeLat": 37.6974, "homeLng": -122.436 },
-            { "firstName": "Shalondra", "lastName": "Guillory", "homeAddress": "460 Inverness Dr, CA, 94044-2037", "jobAddress": "120 Kearny St", "homeLat": 37.6186, "homeLng": -122.4045 },
-            { "firstName": "Tesfayohannes", "lastName": "Haile", "homeAddress": "1010 Bush St Apt 219, CA, 94109-6214", "jobAddress": "717 Market St", "homeLat": 37.7897, "homeLng": -122.4143 },
-            { "firstName": "Kimberly", "lastName": "Hale", "homeAddress": "243 Holly Ave, CA, 94080-1338", "jobAddress": "150 Post St", "homeLat": 37.5144, "homeLng": -122.4925 },
-            { "firstName": "Robert", "lastName": "Hand", "homeAddress": "2410 E Swain Rd, CA, 95210-3613", "jobAddress": "222 Kearny St", "homeLat": 38.0125, "homeLng": -121.3197 },
-            { "firstName": "Reynard", "lastName": "Harden", "homeAddress": "640 Clay St Apt 344, CA, 94111-2502", "jobAddress": "311 California St", "homeLat": 37.795, "homeLng": -122.4025 },
-            { "firstName": "Luis", "lastName": "Hernandez", "homeAddress": "101 Bismark St Apt C, CA, 94014-2186", "jobAddress": "501 2nd St", "homeLat": 37.6917, "homeLng": -122.4414 },
-            { "firstName": "Lance", "lastName": "Hillier", "homeAddress": "739 Stockton St, CA, 94108-2081", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7954, "homeLng": -122.4081 },
-            { "firstName": "Latarra", "lastName": "Honeycutt-Brown", "homeAddress": "3119 Southampton Ct Apt 24, CA, 94806-2687", "jobAddress": "101 Mission St", "homeLat": 37.9625, "homeLng": -122.3082 },
-            { "firstName": "Hugh", "lastName": "Dempsey", "homeAddress": "2030 24th Ave, CA, 94116-1218", "jobAddress": "1 La Avanzada St", "homeLat": 37.7497, "homeLng": -122.481 },
-            { "firstName": "Jeffrey", "lastName": "Hughley", "homeAddress": "4224 Porter St, CA, 94619-1829", "jobAddress": "601 California St", "homeLat": 37.7681, "homeLng": -122.1793 },
-            { "firstName": "Janice", "lastName": "Inarda-Shield", "homeAddress": "3400 Richmond Pkwy Apt 1223, CA, 94806-5219", "jobAddress": "26 Ofarrell St", "homeLat": 37.9719, "homeLng": -122.3168 },
-            { "firstName": "Delon", "lastName": "Johnson", "homeAddress": "14744 Washington Ave Apt 415, CA, 94578-4227", "jobAddress": "1019 Market St", "homeLat": 37.6896, "homeLng": -122.1311 },
-            { "firstName": "Jerome", "lastName": "Jordan", "homeAddress": "747 San Pablo Ave Apt 1, CA, 94564-2652", "jobAddress": "1019 Market St", "homeLat": 38.0069, "homeLng": -122.3552 },
-            { "firstName": "Elsy", "lastName": "Juarez", "homeAddress": "556 2nd St, CA, 94801-2604", "jobAddress": "600 California St", "homeLat": 37.9317, "homeLng": -122.352 },
-            { "firstName": "Hari", "lastName": "Karki", "homeAddress": "939 S 55th St, CA, 94804-4701", "jobAddress": "181 Fremont St", "homeLat": 37.8931, "homeLng": -122.3065 },
-            { "firstName": "Subana", "lastName": "Karki", "homeAddress": "939 S 55th St, CA, 94804-4701", "jobAddress": "181 Fremont St", "homeLat": 37.8931, "homeLng": -122.3065 },
-            { "firstName": "Peter", "lastName": "Keys", "homeAddress": "179 Larissa Ln, CA, 94590-7607", "jobAddress": "101 Montgomery St", "homeLat": 37.9398, "homeLng": -122.3418 },
-            { "firstName": "Julius", "lastName": "Kobza", "homeAddress": "820 Corcoran Ave, CA, 94589-1879", "jobAddress": "100 Montgomery St", "homeLat": 38.0833, "homeLng": -122.2511 },
-            { "firstName": "Aleksandrs", "lastName": "Kotlovs", "homeAddress": "1447 Jones St Apt 3, CA, 94109-3284", "jobAddress": "425 Market St", "homeLat": 37.792, "homeLng": -122.4137 },
-            { "firstName": "Perfidia Fia", "lastName": "Kyono", "homeAddress": "766 Higate Dr, CA, 94015-4214", "jobAddress": "425 Market St", "homeLat": 37.6433, "homeLng": -122.4556 },
-            { "firstName": "Jorge", "lastName": "Lahiff", "homeAddress": "174 Judson Ave, CA, 94112-1847", "jobAddress": "599 Skyline Blvd", "homeLat": 37.7214, "homeLng": -122.4497 },
-            { "firstName": "Alexander", "lastName": "Lewis", "homeAddress": "2704 Harrison St, CA, 94612-3816", "jobAddress": "230 California St", "homeLat": 37.8173, "homeLng": -122.2612 },
-            { "firstName": "Yun", "lastName": "Lezeuz", "homeAddress": "1714 E 15th St, CA, 94606-4528", "jobAddress": "101 Montgomery St", "homeLat": 37.7854, "homeLng": -122.2475 },
-            { "firstName": "Asia", "lastName": "Mack", "homeAddress": "41 Anair Way, CA, 94605-4873", "jobAddress": "111 Pine St", "homeLat": 37.7834, "homeLng": -122.1853 },
-            { "firstName": "Myint", "lastName": "Maung", "homeAddress": "2326 27th Ave, CA, 94116-2322", "jobAddress": "210 Post St", "homeLat": 37.7441, "homeLng": -122.4842 },
-            { "firstName": "Anthony", "lastName": "Mitchell", "homeAddress": "160 Pecks Ln, CA, 94080-1763", "jobAddress": "425 Market St", "homeLat": 37.5222, "homeLng": -122.4939 },
-            { "firstName": "Richard", "lastName": "Mollette", "homeAddress": "4061 E Castro Valley Blvd, CA, 94552-4840", "jobAddress": "101 Montgomery St", "homeLat": 37.6896, "homeLng": -122.0494 },
-            { "firstName": "Euikeun", "lastName": "Myung", "homeAddress": "225 Hyde St Apt 620, CA, 94102-3378", "jobAddress": "711 Eddy St", "homeLat": 37.7832, "homeLng": -122.4162 },
-            { "firstName": "Reginald", "lastName": "Neal", "homeAddress": "905 Columbus Ave Apt 126, CA, 94133-2309", "jobAddress": "220 Montgomery St", "homeLat": 37.8055, "homeLng": -122.4169 },
-            { "firstName": "John", "lastName": "Nelson", "homeAddress": "401 Presidio St, CA, 94806-5037", "jobAddress": "601 California St", "homeLat": 37.9546, "homeLng": -122.3526 },
-            { "firstName": "Simon", "lastName": "Ng", "homeAddress": "15487 Tern Ct, CA, 94579-2765", "jobAddress": "711 Eddy St", "homeLat": 37.6749, "homeLng": -122.103 },
-            { "firstName": "Mamadou", "lastName": "Nguer", "homeAddress": "1545 Eddy St Apt 215, CA, 94115-4177", "jobAddress": "711 Eddy St", "homeLat": 37.7835, "homeLng": -122.4344 },
-            { "firstName": "Osamede", "lastName": "Obazee", "homeAddress": "23 Fleetwood Drive, CA, 94015", "jobAddress": "711 Eddy St", "homeLat": 37.6256, "homeLng": -122.4411 },
-            { "firstName": "Chy", "lastName": "Okochi", "homeAddress": "1259 Revere Ave, CA, 94124-3338", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7317, "homeLng": -122.3871 },
-            { "firstName": "Roberto", "lastName": "Orbegoso", "homeAddress": "979 Hanover St, CA, 94014-1212", "jobAddress": "120 Kearny St", "homeLat": 37.6766, "homeLng": -122.4452 },
-            { "firstName": "Kehinde", "lastName": "Oshin", "homeAddress": "640 Clay St Unit 128, CA, 94111", "jobAddress": "425 California St", "homeLat": 37.795, "homeLng": -122.4025 },
-            { "firstName": "Sherina", "lastName": "Owens", "homeAddress": "1869 Santa Fe St, CA, 94561-1652", "jobAddress": "170 Maiden Ln", "homeLat": 38.0534, "homeLng": -122.2598 },
-            { "firstName": "Daniel", "lastName": "Ozabuki", "homeAddress": "795 Geary St Apt 303, CA, 94109-7312", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7872, "homeLng": -122.4162 },
-            { "firstName": "Marian", "lastName": "Perez", "homeAddress": "78 Vendome Ave, CA, 94014-1054", "jobAddress": "240 Stockton St", "homeLat": 37.7032, "homeLng": -122.4334 },
-            { "firstName": "Rommel", "lastName": "Perez", "homeAddress": "125 Mullen Ave, CA, 94110-5329", "jobAddress": "150 Spear St Ste 775", "homeLat": 37.7552, "homeLng": -122.412 },
-            { "firstName": "Stanislaw", "lastName": "Poczan", "homeAddress": "1435 Laguna St Apt 2, CA, 94115-3742", "jobAddress": "120 Kearny St", "homeLat": 37.7854, "homeLng": -122.4287 },
-            { "firstName": "Danishwar", "lastName": "Prakash", "homeAddress": "P.O. Box 57150, CA, 94545-7150", "jobAddress": "1635 Divisadero St", "homeLat": 37.669, "homeLng": -122.081 },
-            { "firstName": "Raul", "lastName": "Rebadulla", "homeAddress": "3478 Hillsborough Dr, CA, 94520-1559", "jobAddress": "1635 Divisadero St", "homeLat": 37.9406, "homeLng": -122.0461 },
-            { "firstName": "Reginald", "lastName": "Stamps", "homeAddress": "1534 Plaza Ln Apt 134, CA, 94010-3204", "jobAddress": "420 23rd St", "homeLat": 37.5857, "homeLng": -122.3688 },
-            { "firstName": "Deramus", "lastName": "Reynolds", "homeAddress": "680 Center Ave Apt 213, CA, 94553-4663", "jobAddress": "736 Mission St", "homeLat": 38.0062, "homeLng": -122.1481 },
-            { "firstName": "Dwight", "lastName": "Rhodman", "homeAddress": "1013 Syracuse Cir, CA, 95687-4671", "jobAddress": "111 Pine St", "homeLat": 38.356, "homeLng": -121.9961 },
-            { "firstName": "Charlotte", "lastName": "Rivers", "homeAddress": "3185 Contra Loma Blvd B152, CA, 94509", "jobAddress": "1 La Avanzada St", "homeLat": 37.9715, "homeLng": -121.9478 },
-            { "firstName": "Auxiliadora", "lastName": "Robelo", "homeAddress": "1515 38th Ave Apt 5, CA, 94601-3561", "jobAddress": "120 Kearny St", "homeLat": 37.7766, "homeLng": -122.2272 },
-            { "firstName": "Kimvenzor", "lastName": "Roca", "homeAddress": "262 Arleta Ave, CA, 94134-2314", "jobAddress": "1800 Mission St", "homeLat": 37.712, "homeLng": -122.4228 },
-            { "firstName": "Romulo", "lastName": "Rismal", "homeAddress": "100 Bayview Dr, CA, 94080-7335", "jobAddress": "1 La Avanzada St", "homeLat": 37.5255, "homeLng": -122.4939 },
-            { "firstName": "Norman", "lastName": "Rosquites", "homeAddress": "2180 California St Apt 204, CA, 94520-7312", "jobAddress": "1280 Laguna St", "homeLat": 37.9546, "homeLng": -122.0163 },
-            { "firstName": "Carlos", "lastName": "Salmon Sanchez", "homeAddress": "2608 Larch Way, CA, 94509-7770", "jobAddress": "711 Eddy St", "homeLat": 37.9622, "homeLng": -121.9669 },
-            { "firstName": "Arleigh", "lastName": "Sandoc", "homeAddress": "6748 Mission St Apt 613, CA, 94014-2031", "jobAddress": "181 Fremont St", "homeLat": 37.7029, "homeLng": -122.4578 },
-            { "firstName": "Bradley", "lastName": "Sandoc", "homeAddress": "6748 Mission St Apt 613, CA, 94014-2031", "jobAddress": "425 Market St", "homeLat": 37.7029, "homeLng": -122.4578 },
-            { "firstName": "Ramiro", "lastName": "Saucedo", "homeAddress": "2818 Ingalls St, CA, 94124-3630", "jobAddress": "120 Kearny St", "homeLat": 37.728, "homeLng": -122.3888 },
-            { "firstName": "Scott", "lastName": "Young", "homeAddress": "3019 23rd St # C, CA, 94110-3302", "jobAddress": "1 La Avanzada St", "homeLat": 37.7533, "homeLng": -122.4111 },
-            { "firstName": "Richard", "lastName": "Seddi", "homeAddress": "333 Randolph St Apt 18, CA, 94132-3105", "jobAddress": "30 Grant Ave", "homeLat": 37.7198, "homeLng": -122.4697 },
-            { "firstName": "Angela", "lastName": "Seward", "homeAddress": "2005 Laura Ave, CA, 94577-1213", "jobAddress": "90 New Montgomery St", "homeLat": 37.7011, "homeLng": -122.1585 },
-            { "firstName": "Johnathan", "lastName": "Shimek", "homeAddress": "524 Patricia Ave, CA, 94401-3046", "jobAddress": "599 Skyline Blvd", "homeLat": 37.5878, "homeLng": -122.3486 },
-            { "firstName": "Tenzin", "lastName": "Shrestha", "homeAddress": "629 38th St, CA, 94805-1701", "jobAddress": "181 Fremont St", "homeLat": 37.9499, "homeLng": -122.3377 },
-            { "firstName": "Moises", "lastName": "Silla", "homeAddress": "228 San Felipe Ave Apt 2, CA, 94080-3058", "jobAddress": "501 2nd St", "homeLat": 37.5113, "homeLng": -122.4842 },
-            { "firstName": "John", "lastName": "Skinner", "homeAddress": "268 Bush St, CA, 94104-3503", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7911, "homeLng": -122.4019 },
-            { "firstName": "Michael", "lastName": "Smith", "homeAddress": "3421 Hudson Ct Apt 98, CA, 94509-4046", "jobAddress": "1800 Mission St", "homeLat": 37.9626, "homeLng": -121.9793 },
-            { "firstName": "James", "lastName": "Stewart", "homeAddress": "355 Silver Ave, CA, 94112-1509", "jobAddress": "222 Kearny St", "homeLat": 37.7317, "homeLng": -122.4223 },
-            { "firstName": "Michael", "lastName": "Sullivan", "homeAddress": "1226 Grant Ave Unit 35, CA, 94133-3910", "jobAddress": "120 Kearny St", "homeLat": 37.801, "homeLng": -122.4074 },
-            { "firstName": "Mohammed", "lastName": "Taifi", "homeAddress": "1650 Turk St, CA, 94115-4528", "jobAddress": "1280 Laguna St", "homeLat": 37.7818, "homeLng": -122.4357 },
-            { "firstName": "Philip", "lastName": "Tanti", "homeAddress": "668 Clay St Apt 100, CA, 94111-2502", "jobAddress": "111 Pine St", "homeLat": 37.7952, "homeLng": -122.403 },
-            { "firstName": "Uo", "lastName": "Tauai", "homeAddress": "70 Navy Rd, CA, 94124-2825", "jobAddress": "501 2nd St", "homeLat": 37.7202, "homeLng": -122.3789 },
-            { "firstName": "Aaron", "lastName": "Taylor", "homeAddress": "1431 Jackson St Apt 414, CA, 94612-4030", "jobAddress": "425 California St", "homeLat": 37.8078, "homeLng": -122.2625 },
-            { "firstName": "Abraham", "lastName": "Tesfagiorgis", "homeAddress": "407 Fairmount Ave Apt 305, CA, 94611-5589", "jobAddress": "153 Kearny St", "homeLat": 37.8184, "homeLng": -122.2536 },
-            { "firstName": "Dexter", "lastName": "Thomas", "homeAddress": "1121 Addison St Apt 1, CA, 94702-1636", "jobAddress": "1800 Mission St", "homeLat": 37.8698, "homeLng": -122.2903 },
-            { "firstName": "Joseph", "lastName": "Tice", "homeAddress": "6748 Mission St # 218, CA, 94014-2031", "jobAddress": "220 Montgomery St", "homeLat": 37.7029, "homeLng": -122.4578 },
-            { "firstName": "Brandon", "lastName": "Tucker", "homeAddress": "683 Frederick St, CA, 94117-2709", "jobAddress": "220 Montgomery St", "homeLat": 37.7663, "homeLng": -122.4503 },
-            { "firstName": "Bassey", "lastName": "Udoh", "homeAddress": "6511 Bayview Dr, CA, 94605-3135", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7686, "homeLng": -122.1585 },
-            { "firstName": "William", "lastName": "Villalobos", "homeAddress": "49 Harrington St Apt 1, CA, 94112-2601", "jobAddress": "181 Fremont St", "homeLat": 37.7288, "homeLng": -122.433 },
-            { "firstName": "Antonio", "lastName": "Villasenor", "homeAddress": "8300 Oceanview Ter Apt 115, CA, 94132-3288", "jobAddress": "601 California St", "homeLat": 37.7126, "homeLng": -122.493 },
-            { "firstName": "Oscar", "lastName": "Vivas-Ramirez", "homeAddress": "1045 Mission St Apt 422, CA, 94103-5824", "jobAddress": "100 Montgomery St", "homeLat": 37.7792, "homeLng": -122.4132 },
-            { "firstName": "Angelo", "lastName": "Vivero", "homeAddress": "1166 Chesapeake Dr, CA, 94565-4489", "jobAddress": "120 Kearny St", "homeLat": 37.9701, "homeLng": -122.062 },
-            { "firstName": "Bishnu", "lastName": "Wagle", "homeAddress": "811 S 49th St, CA, 94804-4428", "jobAddress": "633 Folsom St Ste 100", "homeLat": 37.8966, "homeLng": -122.3168 },
-            { "firstName": "Eli", "lastName": "Walin", "homeAddress": "1492 Pacific Ave Apt 6, CA, 94109-2683", "jobAddress": "230 California St", "homeLat": 37.7946, "homeLng": -122.4208 },
-            { "firstName": "Malana", "lastName": "Weems", "homeAddress": "1689 13th st, CA, 94607-1534", "jobAddress": "100 Montgomery St", "homeLat": 37.8105, "homeLng": -122.2907 },
-            { "firstName": "Cleo", "lastName": "West", "homeAddress": "106 Fern St Apt 3, CA, 94109-5509", "jobAddress": "750 Battery St", "homeLat": 37.7865, "homeLng": -122.4187 },
-            { "firstName": "Latisha", "lastName": "White", "homeAddress": "600 Wilbur Ave Apt 2036, CA, 94509-7525", "jobAddress": "150 Spear St Ste 775", "homeLat": 38.0076, "homeLng": -121.8499 },
-            { "firstName": "Charles", "lastName": "Whitley", "homeAddress": "3052 Pleitner Ave, CA, 94602-3119", "jobAddress": "150 Spear St Ste 775", "homeLat": 37.795, "homeLng": -122.2343 },
-            { "firstName": "Domariae", "lastName": "Williams", "homeAddress": "1030 Taylor Ave apt D, CA, 94501-2379", "jobAddress": "30 Maiden Ln", "homeLat": 37.8763, "homeLng": -122.2858 },
-            { "firstName": "Gary", "lastName": "Wilson", "homeAddress": "P.O. Box 330272, CA, 94133-0272", "jobAddress": "600 California St", "homeLat": 37.798, "homeLng": -122.406 },
-            { "firstName": "Abdulhalim", "lastName": "Wolfe", "homeAddress": "2912 Diamond St Apt 386, CA, 94131-3208", "jobAddress": "100 Montgomery St", "homeLat": 37.737, "homeLng": -122.4344 },
-            { "firstName": "William", "lastName": "Wood", "homeAddress": "2087 30th Ave, CA, 94116-1149", "jobAddress": "115 Sansome St", "homeLat": 37.75, "homeLng": -122.4871 },
-            { "firstName": "Aaron", "lastName": "Woodworth", "homeAddress": "1040 Stockton St Apt 47, CA, 94108-1162", "jobAddress": "130 Battery St", "homeLat": 37.7975, "homeLng": -122.4086 },
-            { "firstName": "Jesse", "lastName": "Wright", "homeAddress": "29039 Aztec Rd, CA, 94544-6026", "jobAddress": "220 Montgomery St", "homeLat": 37.6186, "homeLng": -122.083 },
-            { "firstName": "Cynthia", "lastName": "Yarbor", "homeAddress": "7911 Bancroft Ave, CA, 94605-3265", "jobAddress": "425 Market St", "homeLat": 37.7505, "homeLng": -122.1706 },
-            { "firstName": "Jimmy", "lastName": "Zaragoza", "homeAddress": "64 Turk St Apt 401, CA, 94102-2886", "jobAddress": "456 Montgomery St", "homeLat": 37.7845, "homeLng": -122.4099 },
-            { "firstName": "Scott", "lastName": "Zimels", "homeAddress": "2230 Geary Blvd Apt 10, CA, 94115-3478", "jobAddress": "170 Maiden Ln", "homeLat": 37.7844, "homeLng": -122.4447 },
-            { "firstName": "Enefiok", "lastName": "Akpan", "homeAddress": "22328 S Garden Ave Apt 0, CA, 94541-6012", "jobAddress": "555 12th St", "homeLat": 37.693, "homeLng": -122.0827 },
-            { "firstName": "Getablot", "lastName": "Belayneh", "homeAddress": "1400 San Leandro Blvd Unit 406, CA, 94577-1539", "jobAddress": "1611 Telegraph ave", "homeLat": 37.722, "homeLng": -122.1587 },
-            { "firstName": "Ayele", "lastName": "Beyene", "homeAddress": "378 Van Buren Ave Apt 201, CA, 94610-4859", "jobAddress": "475 14th St", "homeLat": 37.8093, "homeLng": -122.2575 },
-            { "firstName": "Angelique", "lastName": "Brown", "homeAddress": "385 14th St, CA, 94612-3966", "jobAddress": "475 14th St", "homeLat": 37.803, "homeLng": -122.2709 },
-            { "firstName": "Joe", "lastName": "Brown", "homeAddress": "2010 Milvia St Unit 310, CA, 94704-1679", "jobAddress": "2001 Center St", "homeLat": 37.8727, "homeLng": -122.2704 },
-            { "firstName": "Marie", "lastName": "Brown", "homeAddress": "2342 Shattuck Ave Apt 909, CA, 94704-1517", "jobAddress": "32205 Union Lndg", "homeLat": 37.8672, "homeLng": -122.2683 },
-            { "firstName": "Manuel Jr", "lastName": "Calzada", "homeAddress": "1425 Harrison St Apt 122, CA, 94612-3923", "jobAddress": "1955 Broadway", "homeLat": 37.8052, "homeLng": -122.2646 },
-            { "firstName": "Krishan", "lastName": "Dutt", "homeAddress": "2523 Erskine Ln, CA, 94545-3025", "jobAddress": "6425 Christie Ave", "homeLat": 37.6416, "homeLng": -122.1009 },
-            { "firstName": "Loubna", "lastName": "Erreyahi", "homeAddress": "3301 Telegraph Ave Apt 305, CA, 94609-3055", "jobAddress": "555 12th St", "homeLat": 37.8228, "homeLng": -122.2655 },
-            { "firstName": "Darren", "lastName": "Flenoy", "homeAddress": "2915 N Texas St Apt 152, CA, 94533-7339", "jobAddress": "1611 Telegraph ave", "homeLat": 38.277, "homeLng": -122.2576 },
-            { "firstName": "Jada", "lastName": "Fluker", "homeAddress": "1475 9th St, CA, 94607-1956", "jobAddress": "2000 Franklin St", "homeLat": 37.8105, "homeLng": -122.2952 },
-            { "firstName": "Solome", "lastName": "Hagos", "homeAddress": "1382 E 32nd St, CA, 94602-1023", "jobAddress": "7677 Oakport St", "homeLat": 37.7788, "homeLng": -122.2244 },
-            { "firstName": "Jacqueline", "lastName": "Hammonds", "homeAddress": "2209 E 24th St Apt 1, CA, 94606-4257", "jobAddress": "1970 Broadway Ste 810", "homeLat": 37.7816, "homeLng": -122.2393 },
-            { "firstName": "Yonas", "lastName": "Hdru", "homeAddress": "3768 Piedmont Ave Apt B, CA, 94611-5330", "jobAddress": "300 Frank H Ogawa Plz", "homeLat": 37.8247, "homeLng": -122.2512 },
-            { "firstName": "Joseph", "lastName": "Henry", "homeAddress": "1530 Ellis St Apt 211, CA, 94520-2739", "jobAddress": "1750 Broadway", "homeLat": 37.9621, "homeLng": -122.0287 },
-            { "firstName": "Dawnn", "lastName": "Hills", "homeAddress": "2323 Broadway, CA, 94612-2414", "jobAddress": "1438 Webster St", "homeLat": 37.8143, "homeLng": -122.2679 },
-            { "firstName": "Rasheed", "lastName": "Johnson", "homeAddress": "631 Colorados Dr, CA, 94603-3529", "jobAddress": "5959 Shellmound Street", "homeLat": 37.7423, "homeLng": -122.1891 },
-            { "firstName": "Marian", "lastName": "McCullough", "homeAddress": "7886 Ney Ave Apt B, CA, 94605-3352", "jobAddress": "7677 Oakport St", "homeLat": 37.7497, "homeLng": -122.1705 },
-            { "firstName": "Gwendolyn", "lastName": "McGregor", "homeAddress": "P.O. Box 814, CA, 94590", "jobAddress": "80 Grand Ave", "homeLat": 37.933, "homeLng": -122.365 },
-            { "firstName": "Heather", "lastName": "Morris", "homeAddress": "5460 Bancroft Ave Apt 103, CA, 94601-5838", "jobAddress": "1300 Clay St", "homeLat": 37.7656, "homeLng": -122.1751 },
-            { "firstName": "Xavier", "lastName": "Newcomb", "homeAddress": "655 S Elmhurst Ave, CA, 94603-2247", "jobAddress": "2120 Broadway", "homeLat": 37.7388, "homeLng": -122.1932 },
-            { "firstName": "Chris", "lastName": "Nwadigo", "homeAddress": "745 E 11th St Apt 4, CA, 94606-3644", "jobAddress": "25500 Clawiter Rd", "homeLat": 37.7915, "homeLng": -122.2575 },
-            { "firstName": "Anita", "lastName": "Paul", "homeAddress": "770 Carlson Blvd Apt 3, CA, 94804-4169", "jobAddress": "555 12th St", "homeLat": 37.9009, "homeLng": -122.3015 },
-            { "firstName": "Jazmine", "lastName": "Reybol", "homeAddress": "330 Athol Ave, CA, 94606-1461", "jobAddress": "1970 Broadway Ste 810", "homeLat": 37.7984, "homeLng": -122.2509 },
-            { "firstName": "Larry", "lastName": "Robinson", "homeAddress": "3258 Lynde St, CA, 94601-2732", "jobAddress": "555 12th St", "homeLat": 37.7818, "homeLng": -122.2224 },
-            { "firstName": "Winston", "lastName": "Robinson", "homeAddress": "1916 8th Ave, CA, 94606-2517", "jobAddress": "1611 Telegraph Ave Fl 11", "homeLat": 37.7801, "homeLng": -122.247 },
-            { "firstName": "Joseluis", "lastName": "Rodriguez", "homeAddress": "2812 Atwell Ave, CA, 94601-2708", "jobAddress": "2120 Broadway", "homeLat": 37.7819, "homeLng": -122.229 },
-            { "firstName": "Bimal", "lastName": "Singh", "homeAddress": "3944 Kite Way, CA, 94509-6452", "jobAddress": "7677 Oakport St", "homeLat": 37.949, "homeLng": -121.9961 },
-            { "firstName": "Richard", "lastName": "Stewart", "homeAddress": "1399 Pacific Ave Apt 216, CA, 94577-2555", "jobAddress": "555 12th St", "homeLat": 37.7214, "homeLng": -122.1643 },
-            { "firstName": "Anayansi", "lastName": "Voltizano", "homeAddress": "1600 162nd Ave Apt 2, CA, 94578-2158", "jobAddress": "80 Grand Ave", "homeLat": 37.6974, "homeLng": -122.1466 },
-            { "firstName": "Jasymn", "lastName": "Williams", "homeAddress": "2415 Sunny Ln Apt 31, CA, 94509-3169", "jobAddress": "1340 Treat Blvd Ste 160", "homeLat": 37.9897, "homeLng": -121.9392 },
-            { "firstName": "Boris", "lastName": "Korentsvit", "homeAddress": "1025 Fillmore St Apt 9J, CA, 94115-4761", "jobAddress": "166 Geary Street", "homeLat": 37.7808, "homeLng": -122.4312 },
-            { "firstName": "Livinus", "lastName": "Asuzu", "homeAddress": "575 Orizaba Ave, CA, 94132-2817", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.722, "homeLng": -122.4645 },
-            { "firstName": "Moses", "lastName": "Kiarie", "homeAddress": "1675 Hays St Apt 116, CA, 94577-4437", "jobAddress": "55 Hawthorne St", "homeLat": 37.712, "homeLng": -122.1528 },
-            { "firstName": "Lorenzo", "lastName": "Hawkins", "homeAddress": "34 Turk St Apt 550, CA, 94102-2833", "jobAddress": "360 Spear St", "homeLat": 37.7846, "homeLng": -122.4095 },
-            { "firstName": "Jameila", "lastName": "Allen", "homeAddress": "17449 Jerry Pl, CA, 94541-1379", "jobAddress": "25500 Clawiter Rd", "homeLat": 37.6698, "homeLng": -122.0917 },
-            { "firstName": "Shahid", "lastName": "Yousufzai", "homeAddress": "928 Canada Dr, CA, 95035-4503", "jobAddress": "1438 Webster St", "homeLat": 37.4243, "homeLng": -121.8906 },
-            { "firstName": "Nessrine", "lastName": "Kasmi", "homeAddress": "776 Geary St Apt 502, CA, 94109-7339", "jobAddress": "1280 Laguna St", "homeLat": 37.787, "homeLng": -122.4158 },
-            { "firstName": "Nicholas", "lastName": "Rizzo", "homeAddress": "1524 Wainwright Ave, CA, 94577-2452", "jobAddress": "1955 Broadway", "homeLat": 37.7145, "homeLng": -122.1691 },
-            { "firstName": "Vicky", "lastName": "Jimenez", "homeAddress": "148 2nd St, CA, 94801-3447", "jobAddress": "1955 Broadway", "homeLat": 37.9304, "homeLng": -122.3562 },
-            { "firstName": "Krystyna", "lastName": "Robinson", "homeAddress": "1311 Webster St Apt E300, CA, 94501-3804", "jobAddress": "425 Market St", "homeLat": 37.7733, "homeLng": -122.2215 },
-            { "firstName": "Roel", "lastName": "Rada", "homeAddress": "27836 Ormond Ave, CA, 94544-5020", "jobAddress": "420 23rd St", "homeLat": 37.6322, "homeLng": -122.0927 },
-            { "firstName": "Justin", "lastName": "Chandra", "homeAddress": "249 Boardwalk Ave Apt F, CA, 94066-2206", "jobAddress": "420 23rd St", "homeLat": 37.5273, "homeLng": -122.261 },
-            { "firstName": "Robert", "lastName": "Gentry", "homeAddress": "9445 Dunbar Dr, CA, 94603-3014", "jobAddress": "555 12th St", "homeLat": 37.7303, "homeLng": -122.1932 },
-            { "firstName": "Jerome", "lastName": "Guion", "homeAddress": "556 Jones St # 702, CA, 94102-2008", "jobAddress": "500 Howard St", "homeLat": 37.786, "homeLng": -122.4124 },
-            { "firstName": "Leandre", "lastName": "Aubrey", "homeAddress": "1333 N Camino Alto Unit 157, CA, 94589-2534", "jobAddress": "220 Montgomery St", "homeLat": 38.0934, "homeLng": -122.247 },
-            { "firstName": "Taliyah", "lastName": "Cole", "homeAddress": "1600 Clay St, CA, 94533-3831", "jobAddress": "500 Pine St", "homeLat": 38.257, "homeLng": -122.2858 },
-            { "firstName": "Chandra", "lastName": "Gurung", "homeAddress": "1177 Market St Apt 1005, CA, 94103-1809", "jobAddress": "500 Howard St", "homeLat": 37.7788, "homeLng": -122.4144 },
-            { "firstName": "Faisal", "lastName": "Alnumi", "homeAddress": "2050 Harrington Ave Apt 6, CA, 94601-3744", "jobAddress": "500 Howard St", "homeLat": 37.7744, "homeLng": -122.2201 },
-            { "firstName": "Augusto", "lastName": "Alimorong", "homeAddress": "1700 El Camino Real Spc 20-8, CA, 94080-1280", "jobAddress": "500 Howard St", "homeLat": 37.5015, "homeLng": -122.4831 },
-            { "firstName": "Terrance", "lastName": "Mitchell", "homeAddress": "1419 7th St Apt 3, CA, 94710-1444", "jobAddress": "115 Sansome St", "homeLat": 37.8643, "homeLng": -122.2965 },
-            { "firstName": "Puneet", "lastName": "Abbi", "homeAddress": "27217 Sleepy Hollow Ave S, CA, 94545-4310", "jobAddress": "7677 Oakport St", "homeLat": 37.6416, "homeLng": -122.1159 },
-            { "firstName": "Michael", "lastName": "Gibson", "homeAddress": "229 Cambridge Ave, CA, 94577-1825", "jobAddress": "420 23rd St", "homeLat": 37.7052, "homeLng": -122.1643 },
-            { "firstName": "Ammar", "lastName": "Saleh", "homeAddress": "1106 Bush St Apt 206, CA, 94109-5912", "jobAddress": "633 Folsom St Ste 100", "homeLat": 37.7892, "homeLng": -122.4158 },
-            { "firstName": "Martin", "lastName": "De Guzman", "homeAddress": "5455 Fiesta Rd, CA, 94538-3215", "jobAddress": "100 Montgomery St", "homeLat": 37.518, "homeLng": -122.0229 },
-            { "firstName": "Abderrahman", "lastName": "Chakib", "homeAddress": "16 Camelback Ct, CA, 94523-1330", "jobAddress": "750 Battery St", "homeLat": 37.9812, "homeLng": -122.0622 },
-            { "firstName": "Maheswor", "lastName": "Sodemba", "homeAddress": "830 Eddy St Apt 406, CA, 94109-7757", "jobAddress": "500 Howard St", "homeLat": 37.7838, "homeLng": -122.4213 },
-            { "firstName": "Lorenzo", "lastName": "Hudson", "homeAddress": "624 York St, CA, 94590-6158", "jobAddress": "240 Stockton St", "homeLat": 37.9358, "homeLng": -122.3551 },
-            { "firstName": "Suze", "lastName": "Azor", "homeAddress": "2080 23rd St Unit 6542, CA, 94806-5531", "jobAddress": "1970 Broadway Ste 810", "homeLat": 37.9546, "homeLng": -122.3423 },
-            { "firstName": "Anton", "lastName": "Shankle", "homeAddress": "2830 19th St, CA, 94806-2412", "jobAddress": "2000 Franklin St", "homeLat": 37.9587, "homeLng": -122.3276 },
-            { "firstName": "Mario", "lastName": "Cabral", "homeAddress": "2155 Mission St Apt 206, CA, 94110-6317", "jobAddress": "420 23rd St", "homeLat": 37.7601, "homeLng": -122.4194 },
-            { "firstName": "David", "lastName": "Peterson", "homeAddress": "3571 66th Ave Apt 7, CA, 94605-2150", "jobAddress": "1955 Broadway", "homeLat": 37.7618, "homeLng": -122.1868 },
-            { "firstName": "Yolanda", "lastName": "Perez", "homeAddress": "4 Beechwood Ct, CA, 94565-7325", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.9626, "homeLng": -122.0392 },
-            { "firstName": "Kehinde", "lastName": "Faniran", "homeAddress": "894 Davis St Apt 101, CA, 94577-1552", "jobAddress": "555 12th St", "homeLat": 37.7208, "homeLng": -122.174 },
-            { "firstName": "Jose", "lastName": "Sanchez", "homeAddress": "410 S 34th St Apt C, CA, 94804-3158", "jobAddress": "111 Pine St", "homeLat": 37.9126, "homeLng": -122.328 },
-            { "firstName": "Gerald", "lastName": "Ugwumba", "homeAddress": "2125 92nd Ave Apt 108, CA, 94603-1871", "jobAddress": "425 Market St", "homeLat": 37.7388, "homeLng": -122.1818 },
-            { "firstName": "Mark", "lastName": "Owens", "homeAddress": "117 Seafarer Ct, CA, 94591-7732", "jobAddress": "2000 Franklin St", "homeLat": 38.1189, "homeLng": -122.2033 },
-            { "firstName": "Winfred", "lastName": "Agboka", "homeAddress": "618 14th St Apt 35, CA, 94612", "jobAddress": "1955 Broadway", "homeLat": 37.8037, "homeLng": -122.274 },
-            { "firstName": "Andrew", "lastName": "Olivarez", "homeAddress": "1080 Stanford Ave Apt 5, CA, 94608-2347", "jobAddress": "300 Kansas St", "homeLat": 37.8447, "homeLng": -122.2854 },
-            { "firstName": "Siberria", "lastName": "Briscoe", "homeAddress": "7940 Ney Ave, CA, 94605-3312", "jobAddress": "1955 Broadway", "homeLat": 37.7495, "homeLng": -122.1697 },
-            { "firstName": "Marcos", "lastName": "Garcia", "homeAddress": "1498 Underwood Ave, CA, 94124-3212", "jobAddress": "300 Kansas St", "homeLat": 37.7335, "homeLng": -122.3916 },
-            { "firstName": "Jude", "lastName": "Okoli", "homeAddress": "4424 Folsom Dr, CA, 94531-8213", "jobAddress": "220 Montgomery St", "homeLat": 37.9354, "homeLng": -121.9146 },
-            { "firstName": "Mercedez", "lastName": "Martinez", "homeAddress": "4733 Fleming Ave A, CA, 94619", "jobAddress": "1955 Broadway", "homeLat": 37.7619, "homeLng": -122.1793 },
-            { "firstName": "LaSheon", "lastName": "Scott", "homeAddress": "2535 74th Ave, CA, 94605-2825", "jobAddress": "1611 Telegraph ave", "homeLat": 37.758, "homeLng": -122.1813 },
-            { "firstName": "Ayiaz", "lastName": "Ali", "homeAddress": "24952 Townsend Ave, CA, 94544-1752", "jobAddress": "25500 Clawiter Rd", "homeLat": 37.6496, "homeLng": -122.0955 },
-            { "firstName": "Emmanuel", "lastName": "Iradukunda", "homeAddress": "2330 Webster St Apt 348, CA, 94612-3112", "jobAddress": "1719 Franklin St", "homeLat": 37.813, "homeLng": -122.2638 },
-            { "firstName": "Antonio", "lastName": "Jenkins", "homeAddress": "727 Buena Vista Ave Apt 238, CA, 94501-8230", "jobAddress": "25500 Clawiter Rd", "homeLat": 37.7712, "homeLng": -122.2335 },
-            { "firstName": "Claudia", "lastName": "Del Rio", "homeAddress": "1467 Tucker St, CA, 94603-3871", "jobAddress": "25500 Clawiter Rd", "homeLat": 37.7423, "homeLng": -122.1856 },
-            { "firstName": "Lynze", "lastName": "Scott", "homeAddress": "344 13th St Unit 511, CA, 94612-3962", "jobAddress": "71 Stevenson St Ste 1440", "homeLat": 37.8021, "homeLng": -122.2704 },
-            { "firstName": "Antonio", "lastName": "Cavaness", "homeAddress": "24900 Santa Clara St Apt 2, CA, 94544-2135", "jobAddress": "1719 Franklin St", "homeLat": 37.6486, "homeLng": -122.0984 },
-            { "firstName": "Michael", "lastName": "Legaspi", "homeAddress": "1085 Notre Dame Cir, CA, 95687-4664", "jobAddress": "1400 Geary Blvd", "homeLat": 38.356, "homeLng": -121.9904 },
-            { "firstName": "Adham", "lastName": "Shaef", "homeAddress": "111 Jones St Apt 504, CA, 94102-3965", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.784, "homeLng": -122.4111 },
-            { "firstName": "Nysae", "lastName": "Cedeno", "homeAddress": "712 Oak St, CA, 94117-2517", "jobAddress": "1 La Avanzada St", "homeLat": 37.7744, "homeLng": -122.4312 },
-            { "firstName": "Krishna", "lastName": "Budha", "homeAddress": "125 Coronado Ave Apt 319, CA, 94015-3368", "jobAddress": "599 Skyline Blvd", "homeLat": 37.6416, "homeLng": -122.4635 },
-            { "firstName": "Don", "lastName": "Osuna", "homeAddress": "46 Morningside Dr, CA, 94015-4509", "jobAddress": "456 Montgomery St", "homeLat": 37.6339, "homeLng": -122.4332 },
-            { "firstName": "Antoni", "lastName": "Buhay", "homeAddress": "89 Leese St, CA, 94110-5867", "jobAddress": "420 23rd St", "homeLat": 37.7441, "homeLng": -122.4154 },
-            { "firstName": "Monty", "lastName": "Kaho", "homeAddress": "4274 Deep Creek Rd, CA, 94555-2061", "jobAddress": "7677 Oakport St", "homeLat": 38.0032, "homeLng": -122.4533 },
-            { "firstName": "Xzavier", "lastName": "Middleton", "homeAddress": "7251 Brentwood Blvd Apt 238, CA, 94513-2084", "jobAddress": "181 Fremont St", "homeLat": 37.9255, "homeLng": -121.7013 },
-            { "firstName": "Jewell", "lastName": "Fix", "homeAddress": "1426 3rd Ave Apt 3, CA, 94606-2265", "jobAddress": "201 Mission St", "homeLat": 37.7865, "homeLng": -122.2536 },
-            { "firstName": "Melaysia", "lastName": "Horne", "homeAddress": "59 Villa Cir, CA, 94533-2522", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 38.2562, "homeLng": -122.2749 },
-            { "firstName": "Tracy", "lastName": "Bonnah", "homeAddress": "601 William St Apt 127, CA, 94612-1090", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.8037, "homeLng": -122.2828 },
-            { "firstName": "Isaiah", "lastName": "Allen", "homeAddress": "120 Cataline Ave, CA, 94509-3412", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.9961, "homeLng": -121.9442 },
-            { "firstName": "Bikash", "lastName": "Dhungana", "homeAddress": "1830 Alemany Blvd Apt 208, CA, 94112-3272", "jobAddress": "181 Fremont St", "homeLat": 37.7303, "homeLng": -122.4436 },
-            { "firstName": "Gamal", "lastName": "Ahmed", "homeAddress": "3706 San Pablo Ave Unit 525, CA, 94608-4187", "jobAddress": "5801 Christie Avenue", "homeLat": 37.8488, "homeLng": -122.2965 },
-            { "firstName": "Jumaane", "lastName": "Garrett", "homeAddress": "5618 Boulder Canyon Dr, CA, 94552-5473", "jobAddress": "1955 Broadway", "homeLat": 37.6434, "homeLng": -122.0392 },
-            { "firstName": "Ruth", "lastName": "Dock", "homeAddress": "2550 Hilborn Rd Apt 290, CA, 94534-8609", "jobAddress": "1400 Geary Blvd", "homeLat": 38.281, "homeLng": -122.0463 },
-            { "firstName": "Annastia", "lastName": "Singleton", "homeAddress": "411 29th St Unit 321, CA, 94609-3660", "jobAddress": "220 Montgomery St", "homeLat": 37.8188, "homeLng": -122.2646 },
-            { "firstName": "Rochak", "lastName": "Kadel", "homeAddress": "6767 Hotdog Road", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 18.656654, "homeLng": -11.601563 },
-            { "firstName": "Inder", "lastName": "Gill", "homeAddress": " 8069 Deep in the slums", "jobAddress": "180 Montgomery St Ste 700", "homeLat": -68.005514, "homeLng": -64.511719 },
-            { "firstName": "Ray", "lastName": "Solomon", "homeAddress": " 76 Man Moon St", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 13.614123, "homeLng":-88.884888 },
-            { "firstName": "Julio", "lastName": "Daldon", "homeAddress": "33 No fundo da favela", "jobAddress": "180 Montgomery St Ste 700", "homeLat": -22.905254, "homeLng":-43.231888 },
-            { "firstName": "Brooke", "lastName": "Perry", "homeAddress": "756 Frog Juice Ave ", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 17.981346, "homeLng": -69.873047 },
-            { "firstName": "Ahmad", "lastName": "Falley", "homeAddress": "5371 Foothill Blvd, CA, 94601-5513", "jobAddress": "633 Folsom St Ste 100", "homeLat": 37.7667, "homeLng": -122.1868 },
-            { "firstName": "Williams", "lastName": "Chaninomi", "homeAddress": "745 E 11th St Apt 06, CA, 94606-3645", "jobAddress": "633 Folsom St Ste 100", "homeLat": 37.7915, "homeLng": -122.2575 },
-            { "firstName": "Wossenu", "lastName": "Adesse", "homeAddress": "460 Ellis St Apt 41, CA, 94102-1942", "jobAddress": "633 Folsom St Ste 100", "homeLat": 37.7852, "homeLng": -122.4132 },
-            { "firstName": "Mason", "lastName": "Gilbert", "homeAddress": "157 Paradise Dr Apt 2, CA, 94547-2771", "jobAddress": "1400 Geary Blvd", "homeLat": 37.9942, "homeLng": -122.365 },
-            { "firstName": "Yekini", "lastName": "Farogbe", "homeAddress": "1122 4th Ave, CA, 94606-2304", "jobAddress": "750 Battery St", "homeLat": 37.7909, "homeLng": -122.2583 },
-            { "firstName": "Rudy", "lastName": "Juarez", "homeAddress": "17307 Frances Viia, CA, 94580-2625", "jobAddress": "1100 San Leandro Blvd", "homeLat": 37.6622, "homeLng": -122.1333 },
-            { "firstName": "Esther", "lastName": "Hannam", "homeAddress": "1521 Denton Ave, CA, 94545-1941", "jobAddress": "32205 Union Lndg", "homeLat": 37.6533, "homeLng": -122.106 },
-            { "firstName": "Ignacio", "lastName": "Valdovinos", "homeAddress": "9871 Plymouth St, CA, 94603-2632", "jobAddress": "3000 E 9th St", "homeLat": 37.7275, "homeLng": -122.1915 },
-            { "firstName": "Evelyn", "lastName": "Bellinger", "homeAddress": "131 Catalina St Unit 105, CA, 94124-1778", "jobAddress": "32205 Union Lndg", "homeLat": 37.7176, "homeLng": -122.3787 },
-            { "firstName": "Otamejayen", "lastName": "Anidi", "homeAddress": "1965 Desert Cir Apt 5, CA, 94598-3245", "jobAddress": "3000 E 9th St", "homeLat": 37.9406, "homeLng": -122.0728 },
-            { "firstName": "John", "lastName": "Hedges", "homeAddress": "32600 Almaden Blvd Apt 127, CA, 94587-4139", "jobAddress": "32205 Union Lndg", "homeLat": 37.5815, "homeLng": -122.0527 },
-            { "firstName": "William", "lastName": "Satterfield", "homeAddress": "1711 94th ave, CA, 94603-1609", "jobAddress": "3000 E 9th St", "homeLat": 37.7411, "homeLng": -122.1852 },
-            { "firstName": "Enkhzaya", "lastName": "Oldokh", "homeAddress": "1401 Felton St, CA, 94134-1329", "jobAddress": "1 La Avanzada St", "homeLat": 37.7259, "homeLng": -122.4082 },
-            { "firstName": "Carlos", "lastName": "Zepeda", "homeAddress": "1734 Bridge Ave, CA, 94601-3674", "jobAddress": "3000 E 9th St", "homeLat": 37.7711, "homeLng": -122.232 },
-            { "firstName": "Delfonte", "lastName": "Williams", "homeAddress": "1410 3rd Ave, CA, 94606-2238", "jobAddress": "7677 Oakport St", "homeLat": 37.7865, "homeLng": -122.2536 },
-            { "firstName": "Brittany", "lastName": "Small", "homeAddress": "670 18th St Apt 3, CA, 94612-1342", "jobAddress": "80 Grand Ave", "homeLat": 37.8087, "homeLng": -122.2783 },
-            { "firstName": "Rommel", "lastName": "Calvert", "homeAddress": "904 Corbett Ave Apt 3, CA, 94131-1554", "jobAddress": "1 La Avanzada St", "homeLat": 37.7505, "homeLng": -122.4468 },
-            { "firstName": "Jose", "lastName": "Moran Sanchez", "homeAddress": "1301 67th St Apt A, CA, 94702-2650", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.8488, "homeLng": -122.2929 },
-            { "firstName": "Stepheno", "lastName": "Jackson", "homeAddress": "1512 89th Ave, CA, 94621-1016", "jobAddress": "555 12th St", "homeLat": 37.7483, "homeLng": -122.1932 },
-            { "firstName": "Jean-Paul", "lastName": "Ngilbus", "homeAddress": "3123 Cuthbert Ave, CA, 94602-2725", "jobAddress": "220 Montgomery St", "homeLat": 37.783, "homeLng": -122.2274 },
-            { "firstName": "John", "lastName": "Perkyns", "homeAddress": "2361 Mission ST, CA, 94110", "jobAddress": "717 Market St", "homeLat": 37.7592, "homeLng": -122.4192 },
-            { "firstName": "Stephen", "lastName": "Alleyne", "homeAddress": "1479 Fruitvale Ave Apt 16, CA, 94601-2377", "jobAddress": "220 Montgomery St", "homeLat": 37.7753, "homeLng": -122.2248 },
-            { "firstName": "Liliana", "lastName": "Prieto", "homeAddress": "1107 Carroll Ave, CA, 94124-3751", "jobAddress": "425 Market St", "homeLat": 37.7247, "homeLng": -122.392 },
-            { "firstName": "Shayan", "lastName": "Khan", "homeAddress": "502 Sirina Ct, CA, 95131-3752", "jobAddress": "633 Folsom St Ste 100", "homeLat": 37.4042, "homeLng": -121.8955 },
-            { "firstName": "Apithany", "lastName": "Hayes", "homeAddress": "3404 Harper St Apt A, CA, 94601", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7818, "homeLng": -122.2224 },
-            { "firstName": "Nasreldin", "lastName": "Mohammed", "homeAddress": "1273 106th Ave, CA, 94603-3813", "jobAddress": "378 Embacadero", "homeLat": 37.7431, "homeLng": -122.1891 },
-            { "firstName": "Marcus", "lastName": "Lewis", "homeAddress": "1548 Quesada Ave, CA, 94124-2772", "jobAddress": "201 Mission St", "homeLat": 37.7368, "homeLng": -122.3871 },
-            { "firstName": "Monicia", "lastName": "Smith", "homeAddress": "750 Mandela Pkwy Apt A244, CA, 94607-3488", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.8117, "homeLng": -122.2965 },
-            { "firstName": "Yoro", "lastName": "Sow", "homeAddress": "287 Euclid Ave, CA, 94610", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.8091, "homeLng": -122.2536 },
-            { "firstName": "Tod", "lastName": "Tatney", "homeAddress": "1575 Palou Ave, CA, 94124-2328", "jobAddress": "30 Grant Ave", "homeLat": 37.737, "homeLng": -122.3899 },
-            { "firstName": "James", "lastName": "Townsend", "homeAddress": "21109 Gary Dr Apt 211, CA, 94546-6128", "jobAddress": "1400 Geary Blvd", "homeLat": 37.6434, "homeLng": -122.0722 },
-            { "firstName": "Robyn", "lastName": "Glasco", "homeAddress": "7708 Ney Ave Apt A, CA, 94605-3345", "jobAddress": "300 Frank H Ogawa Plz", "homeLat": 37.7511, "homeLng": -122.1742 },
-            { "firstName": "Michael", "lastName": "Ferreira", "homeAddress": "2772 Simas Ave, CA, 94564-1129", "jobAddress": "300 Frank H Ogawa Plz", "homeLat": 38.0264, "homeLng": -122.3276 },
-            { "firstName": "David", "lastName": "Ferreira", "homeAddress": "2772 Simas Ave, CA, 94564-1129", "jobAddress": "300 Frank H Ogawa Plz", "homeLat": 38.0264, "homeLng": -122.3276 },
-            { "firstName": "Edwards", "lastName": "Sparks", "homeAddress": "2710 May Rd, CA, 94803-3133", "jobAddress": "300 Frank H Ogawa Plz", "homeLat": 38.0242, "homeLng": -122.2891 },
-            { "firstName": "Dominic", "lastName": "Thorn", "homeAddress": "743 Polk St Apt 201, CA, 94109-7832", "jobAddress": "425 Market St", "homeLat": 37.7852, "homeLng": -122.4194 },
-            { "firstName": "Kari", "lastName": "McCoy", "homeAddress": "9301 Thermal St, CA, 94605-4340", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.7323, "homeLng": -122.1585 },
-            { "firstName": "Honesty", "lastName": "Morris", "homeAddress": "2442 64th Ave, CA, 94605-1945", "jobAddress": "25500 Clawiter Rd", "homeLat": 37.7602, "homeLng": -122.1932 },
-            { "firstName": "Davina", "lastName": "Monte", "homeAddress": "1327 Ocean Ave, CA, 94112-1832", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7259, "homeLng": -122.4608 },
-            { "firstName": "Jaleesa", "lastName": "Perry", "homeAddress": "301 Bergedo Dr, CA, 94603-3511", "jobAddress": "3129 Corporate Pl", "homeLat": 37.742, "homeLng": -122.1882 },
-            { "firstName": "Javontae", "lastName": "Roberts", "homeAddress": "527 Buena Vista Ave Apt 203, CA, 94501-2007", "jobAddress": "5801 Christie Avenue", "homeLat": 37.7686, "homeLng": -122.2356 },
-            { "firstName": "Max Ray", "lastName": "Garibay Jr", "homeAddress": "225 Linden Ave, CA, 94066-4804", "jobAddress": "222 Kearny St", "homeLat": 37.5255, "homeLng": -122.2612 },
-            { "firstName": "Emmanuel", "lastName": "Amattah", "homeAddress": "2412 Greentree Ct, CA, 94509-7762", "jobAddress": "6425 Christie Ave", "homeLat": 37.9657, "homeLng": -121.9669 },
-            { "firstName": "Alex", "lastName": "Aguilar-Loza", "homeAddress": "3050 Davis St, CA, 94601-2049", "jobAddress": "7677 Oakport St", "homeLat": 37.7834, "homeLng": -122.228 },
-            { "firstName": "Joseph", "lastName": "Ndiakon", "homeAddress": "2448 Damuth St Apt C, CA, 94602-3044", "jobAddress": "1922 Walnust Street", "homeLat": 37.7915, "homeLng": -122.2367 },
-            { "firstName": "Stasha", "lastName": "Thomas", "homeAddress": "24268 Silva Ave 14, CA, 94544", "jobAddress": "300 Frank H Ogawa Plz", "homeLat": 37.6486, "homeLng": -122.0925 },
-            { "firstName": "Jazlyn", "lastName": "Anderson", "homeAddress": "1540 Fred Jackson Way Unit 201, CA, 94801-1597", "jobAddress": "1922 Walnust Street", "homeLat": 37.9338, "homeLng": -122.3486 },
-            { "firstName": "Christina", "lastName": "Rimer", "homeAddress": "4041 Galenez Way, CA, 94531-9343", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.9406, "homeLng": -121.9146 },
-            { "firstName": "David", "lastName": "Burney", "homeAddress": "1764 Revere Ave, CA, 94124-2346", "jobAddress": "120 Kearny St", "homeLat": 37.7317, "homeLng": -122.3813 },
-            { "firstName": "Brandon", "lastName": "Burns", "homeAddress": "9308 Bancroft Ave, CA, 94603-1842", "jobAddress": "7677 Oakport St", "homeLat": 37.7327, "homeLng": -122.174 },
-            { "firstName": "Jayson", "lastName": "Garnett", "homeAddress": "PO Box 170434, CA, 94117-4421", "jobAddress": "2801 Shadelands Dr", "homeLat": 37.768, "homeLng": -122.449 },
-            { "firstName": "Thurmal", "lastName": "Felise", "homeAddress": "1131 24th St Apt 204, CA, 94607-2454", "jobAddress": "555 12th St", "homeLat": 37.8143, "homeLng": -122.2858 },
-            { "firstName": "Cellouse", "lastName": "Ham", "homeAddress": "1908 65th Ave Apt A, CA, 94621-3858", "jobAddress": "1035 Market St", "homeLat": 37.7667, "homeLng": -122.1963 },
-            { "firstName": "Antonio", "lastName": "Edwards", "homeAddress": "907 Campbell Village Ct, CA, 94607-1323", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.8105, "homeLng": -122.2929 },
-            { "firstName": "Grover", "lastName": "Wayne III", "homeAddress": "8603 Hillside St Apt 214, CA, 94605-3975", "jobAddress": "2000 Franklin St", "homeLat": 37.7423, "homeLng": -122.1643 },
-            { "firstName": "Joshua", "lastName": "Kofoworola", "homeAddress": "1720 12th Ave Apt 213, CA, 94606-3839", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.7818, "homeLng": -122.247 },
-            { "firstName": "Jose", "lastName": "Ruiz Valdez", "homeAddress": "7336 Locke Rd, CA, 95688-8609", "jobAddress": "1970 Broadway Ste 840", "homeLat": 38.3976, "homeLng": -121.9213 },
-            { "firstName": "Mahmudi", "lastName": "Hussein", "homeAddress": "4304 Potrero Ave Apt 24, CA, 94804-4300", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.9042, "homeLng": -122.3218 },
-            { "firstName": "Angel", "lastName": "Diamond", "homeAddress": "2923 West St, CA, 94608-4537", "jobAddress": "3129 Corporate Pl", "homeLat": 37.8202, "homeLng": -122.2778 },
-            { "firstName": "Josue", "lastName": "Vasquez", "homeAddress": "455 Eddy Street, CA, 94109", "jobAddress": "2801 Shadelands Dr", "homeLat": 37.7846, "homeLng": -122.4158 },
-            { "firstName": "Michael", "lastName": "Ziganti", "homeAddress": "422 22nd Ave Apt 3, CA, 94121-3074", "jobAddress": "170 Maiden Ln", "homeLat": 37.7808, "homeLng": -122.481 },
-            { "firstName": "Rupesh", "lastName": "Dutaraj", "homeAddress": "860 Geary St Apt 402, CA, 94109-7220", "jobAddress": "500 Howard St", "homeLat": 37.787, "homeLng": -122.4172 },
-            { "firstName": "Tylee", "lastName": "Cockerham", "homeAddress": "6401 Shellmound St Apt 8419, CA, 94608-2452", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.8447, "homeLng": -122.2929 },
-            { "firstName": "Claudia", "lastName": "Miranda", "homeAddress": "981 Juniper Ct, CA, 94525-1441", "jobAddress": "2801 Shadelands Dr", "homeLat": 38.0315, "homeLng": -122.1481 },
-            { "firstName": "Ernesto", "lastName": "Delgado", "homeAddress": "15993 Saint Johns Dr, CA, 94580-1705", "jobAddress": "5801 Christie Avenue", "homeLat": 37.6599, "homeLng": -122.1333 },
-            { "firstName": "Sarah", "lastName": "Taamai", "homeAddress": "1101 Connecticut St Apt 404, CA, 94107-3895", "jobAddress": "500 Howard St", "homeLat": 37.7592, "homeLng": -122.3995 },
-            { "firstName": "Jamal", "lastName": "Malih", "homeAddress": "161 Crestwood Dr Apt 10, CA, 94015-3246", "jobAddress": "1128 Market St", "homeLat": 37.6433, "homeLng": -122.4497 },
-            { "firstName": "David", "lastName": "Peraza", "homeAddress": "2229 E Leland Rd Apt 141, CA, 94565-5148", "jobAddress": "456 Montgomery St", "homeLat": 37.9897, "homeLng": -121.9961 },
-            { "firstName": "Tyrone", "lastName": "Thomas", "homeAddress": "867 Island Dr, CA, 94502-6751", "jobAddress": "725 85th Ave", "homeLat": 37.7915, "homeLng": -122.247 },
-            { "firstName": "Willie", "lastName": "August", "homeAddress": "1936 16th Ave Apt 2, CA, 94606-3921", "jobAddress": "725 85th Ave", "homeLat": 37.7801, "homeLng": -122.247 },
-            { "firstName": "Christopher", "lastName": "Scott", "homeAddress": "16385 E 14th St Apt 2202, CA, 94578-3243", "jobAddress": "725 85th Ave", "homeLat": 37.6974, "homeLng": -122.1333 },
-            { "firstName": "Jimmy", "lastName": "Pastor", "homeAddress": "890 Davis St Apt 203, CA, 94577-1550", "jobAddress": "725 85th Ave", "homeLat": 37.7208, "homeLng": -122.174 },
-            { "firstName": "Erika", "lastName": "Mendoza Angel", "homeAddress": "1339 Rhode Island St, CA, 94107-3246", "jobAddress": "181 Fremont St", "homeLat": 37.7541, "homeLng": -122.4048 },
-            { "firstName": "Roham", "lastName": "Menghesha", "homeAddress": "407 Fairmount Ave Apt 305, CA, 94611-5589", "jobAddress": "500 Howard St", "homeLat": 37.8184, "homeLng": -122.2536 },
-            { "firstName": "Janaina", "lastName": "Galdino Da Silva", "homeAddress": "180 2nd St Apt B218, CA, 94607-4519", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.8016, "homeLng": -122.2858 },
-            { "firstName": "Yobel", "lastName": "Berhe", "homeAddress": "3502 Laguna Ave, CA, 94602-2904", "jobAddress": "1 La Avanzada St", "homeLat": 37.7797, "homeLng": -122.2274 },
-            { "firstName": "Roman", "lastName": "Mitchell", "homeAddress": "56 Mason St, CA, 94102", "jobAddress": "180 Montgomery St Ste 1650", "homeLat": 37.7846, "homeLng": -122.4093 },
-            { "firstName": "Tracy", "lastName": "La Cour", "homeAddress": "1539 Shafter Ave, CA, 94124-2739", "jobAddress": "101 Mission St", "homeLat": 37.7368, "homeLng": -122.3888 },
-            { "firstName": "Cassandra", "lastName": "Campbell", "homeAddress": "50 Dunedin Dr, CA, 94513-2070", "jobAddress": "180 Montgomery St Ste 1650", "homeLat": 37.9354, "homeLng": -121.7143 },
-            { "firstName": "Peter", "lastName": "Furrer", "homeAddress": "925 Fell St Apt 4, CA, 94117-2421", "jobAddress": "180 Montgomery St Ste 1650", "homeLat": 37.7738, "homeLng": -122.4357 },
-            { "firstName": "Laneah", "lastName": "Allen", "homeAddress": "1514 Oregon St Apt F, CA, 94703-2025", "jobAddress": "1400 Geary Blvd", "homeLat": 37.8596, "homeLng": -122.2825 },
-            { "firstName": "Matthew James", "lastName": "Gamban", "homeAddress": "138 Pope St, CA, 94112-3723", "jobAddress": "180 Montgomery St Ste 1650", "homeLat": 37.728, "homeLng": -122.433 },
-            { "firstName": "James", "lastName": "Barboza", "homeAddress": "24050 Silva Ave Apt 64, CA, 94544-1542", "jobAddress": "180 Montgomery St Ste 1650", "homeLat": 37.6486, "homeLng": -122.089 },
-            { "firstName": "Timothy", "lastName": "Paliani", "homeAddress": "1390 Market St Apt 1422, CA, 94102-5308", "jobAddress": "110 Sutter St", "homeLat": 37.7766, "homeLng": -122.4187 },
-            { "firstName": "Nixon", "lastName": "Matignas", "homeAddress": "16564 Ehle St, CA, 94578-1504", "jobAddress": "180 Montgomery St Ste 1650", "homeLat": 37.6974, "homeLng": -122.1221 },
-            { "firstName": "Desmond", "lastName": "Bissessar", "homeAddress": "238 Baltimore Way, CA, 94112-4431", "jobAddress": "110 Sutter St", "homeLat": 37.7126, "homeLng": -122.4411 },
-            { "firstName": "Lionell", "lastName": "Reed", "homeAddress": "7570 PO Box, CA, 94601-0570", "jobAddress": "32205 Union Lndg", "homeLat": 37.784, "homeLng": -122.223 },
-            { "firstName": "Devante", "lastName": "Smith", "homeAddress": "160 Appleton Ave, CA, 94110-5807", "jobAddress": "5959 Shellmound Street", "homeLat": 37.7483, "homeLng": -122.4111 },
-            { "firstName": "Maya", "lastName": "Boyakins", "homeAddress": "1006 16th St, CA, 94607-2802", "jobAddress": "5959 Shellmound Street", "homeLat": 37.8105, "homeLng": -122.2891 },
-            { "firstName": "Jhenearo", "lastName": "Hemmingway", "homeAddress": "1124 65th Ave Apt A, CA, 94621-3606", "jobAddress": "5959 Shellmound Street", "homeLat": 37.7667, "homeLng": -122.1963 },
-            { "firstName": "Aniyah", "lastName": "Bardell", "homeAddress": "1228 West St, CA, 94612-1028", "jobAddress": "5959 Shellmound Street", "homeLat": 37.8105, "homeLng": -122.2858 },
-            { "firstName": "Elisha", "lastName": "Carlisle", "homeAddress": "19 Deering Ct, CA, 94601-2750", "jobAddress": "1955 Broadway", "homeLat": 37.7818, "homeLng": -122.228 },
-            { "firstName": "Salma", "lastName": "Mazzour", "homeAddress": "530 Francisco Street, Ca, 94133", "jobAddress": "400 Paul Ave", "homeLat": 37.8066, "homeLng": -122.4116 },
-            { "firstName": "Ashanti", "lastName": "Griffin", "homeAddress": "2819 Foothill Ave, Ca, 94804-3907", "jobAddress": "425 California St", "homeLat": 37.9157, "homeLng": -122.3332 },
-            { "firstName": "Anthony", "lastName": "Foster", "homeAddress": "6401 Gray Rock Rd, Ca, 95684-9571", "jobAddress": "3000 E 9th St", "homeLat": 38.601, "homeLng": -121.2642 },
-            { "firstName": "Tekila", "lastName": "Johnson", "homeAddress": "71 10th St Apt 210, Ca, 94607-4852", "jobAddress": "1955 Broadway", "homeLat": 37.7997, "homeLng": -122.2749 },
-            { "firstName": "Rashima", "lastName": "McKelvy", "homeAddress": "21701 Foothill Blvd Apt 227, Ca, 94541-2155", "jobAddress": "555 12th St", "homeLat": 37.6974, "homeLng": -122.083 },
-            { "firstName": "Bernard", "lastName": "Conaway", "homeAddress": "2200 Sycamore Dr Apt G-235, Ca, 94509", "jobAddress": "201 Mission St", "homeLat": 37.973, "homeLng": -121.9442 },
-            { "firstName": "Jean", "lastName": "Lubin", "homeAddress": "611 Nevin Ave Apt A, Ca, 94801-3075", "jobAddress": "5959 Shellmound Street", "homeLat": 37.9358, "homeLng": -122.3551 },
-            { "firstName": "Danaee", "lastName": "Diaz", "homeAddress": "269 24th St Unit 810, Ca, 94612-4492", "jobAddress": "2000 Franklin St", "homeLat": 37.8143, "homeLng": -122.2612 },
-            { "firstName": "Victor", "lastName": "Elizalde", "homeAddress": "639 Geary St Apt 1005, Ca, 94102-1676", "jobAddress": "120 Kearny St", "homeLat": 37.7865, "homeLng": -122.4143 },
-            { "firstName": "Tyrone", "lastName": "Spivey", "homeAddress": "966 36th St Apt 4, Ca, 94608-3937", "jobAddress": "6425 Christie Ave", "homeLat": 37.8258, "homeLng": -122.2858 },
-            { "firstName": "Sequan", "lastName": "Edmonds", "homeAddress": "3246 E 27th St Apt 5, Ca, 94601-2748", "jobAddress": "5959 Shellmound Street", "homeLat": 37.7801, "homeLng": -122.2224 },
-            { "firstName": "Gonzalo", "lastName": "Alviso", "homeAddress": "1938 83rd Ave Apt D, CA, 94621-2244", "jobAddress": "25500 Clawiter Rd", "homeLat": 37.7562, "homeLng": -122.1963 },
-            { "firstName": "Emmanuel", "lastName": "Perez Jr", "homeAddress": "1355 Shafter Ave, Ca, 94124-3344", "jobAddress": "420 23rd St", "homeLat": 37.7368, "homeLng": -122.392 },
-            { "firstName": "Eric", "lastName": "Johnson", "homeAddress": "1930 Folsom St Apt A, Ca, 94103-4287", "jobAddress": "601 California St", "homeLat": 37.7656, "homeLng": -122.4154 },
-            { "firstName": "Gresha", "lastName": "Brown", "homeAddress": "2474 26th Ave Apt 2, Ca, 94601-1941", "jobAddress": "400 Paul Ave", "homeLat": 37.78, "homeLng": -122.232 },
-            { "firstName": "Aliyah", "lastName": "Barrett", "homeAddress": "2316 Bay Meadows Cir, CA, 94566-5437", "jobAddress": "1611 Telegraph ave", "homeLat": 37.8687, "homeLng": -121.9146 },
-            { "firstName": "Erica", "lastName": "Cazares", "homeAddress": "1515 25th Ave, Ca, 94601-1031", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.78, "homeLng": -122.2343 },
-            { "firstName": "Nathaniel", "lastName": "Weaver", "homeAddress": "169 Santa Rosa Ave Apt 101, Ca, 94610-1380", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.8105, "homeLng": -122.2536 },
-            { "firstName": "Isaac", "lastName": "Balogun", "homeAddress": "2314 84th Ave, CA, 94605-3426", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.7552, "homeLng": -122.1932 },
-            { "firstName": "Alexandra", "lastName": "Evans", "homeAddress": "417 S 38th St, Ca, 94804-3239", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.9118, "homeLng": -122.3276 },
-            { "firstName": "Bruce", "lastName": "Miller", "homeAddress": "1060 Howard St, Ca, 94103-2820", "jobAddress": "181 Fremont St", "homeLat": 37.7788, "homeLng": -122.4109 },
-            { "firstName": "Thomas", "lastName": "Dewitt", "homeAddress": "426 S 49th St, Ca, 94804-3478", "jobAddress": "201 Mission St", "homeLat": 37.9066, "homeLng": -122.3168 },
-            { "firstName": "Maria", "lastName": "Preciado", "homeAddress": "1 Saint Francis Place 706, Ca, 94107", "jobAddress": "500 Howard St", "homeLat": 37.7797, "homeLng": -122.4172 },
-            { "firstName": "Zachary", "lastName": "Taylor", "homeAddress": "1202 Via Lucas, Ca, 94580-2230", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.6622, "homeLng": -122.1466 },
-            { "firstName": "Julian", "lastName": "Roberts", "homeAddress": "75 Arch St Apt 212, Ca, 94062-1477", "jobAddress": "1400 Geary Blvd", "homeLat": 37.5686, "homeLng": -122.3218 },
-            { "firstName": "Mitrail", "lastName": "Pinkney", "homeAddress": "6128 Bancroft Ave, Ca, 94605-1450", "jobAddress": "25500 Clawiter Rd", "homeLat": 37.7634, "homeLng": -122.1643 },
-            { "firstName": "Gerald Cedric", "lastName": "Boyakins", "homeAddress": "460 Buena Vista Ave Apt 205, Ca, 94501-1976", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.7686, "homeLng": -122.2356 },
-            { "firstName": "Sandy", "lastName": "Sims", "homeAddress": "2114 10th St, Ca, 94710-2122", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.8687, "homeLng": -122.2965 },
-            { "firstName": "Agustin", "lastName": "Sison", "homeAddress": "275 Morton Dr, Ca, 94015-4445", "jobAddress": "181 Fremont St", "homeLat": 37.6259, "homeLng": -122.4332 },
-            { "firstName": "Trent", "lastName": "Choyce", "homeAddress": "144 Grand Ave Apt 36, Ca, 94612-3740", "jobAddress": "420 23rd St", "homeLat": 37.8078, "homeLng": -122.2683 },
-            { "firstName": "Jay", "lastName": "Cowen", "homeAddress": "424 Ellis St, Ca, 94102", "jobAddress": "1400 Geary Blvd", "homeLat": 37.7852, "homeLng": -122.4124 },
-            { "firstName": "Jiacheng", "lastName": "Wen", "homeAddress": "5536a California St, Ca, 94121-1324", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7844, "homeLng": -122.4777 },
-            { "firstName": "Julie", "lastName": "Sand", "homeAddress": "1236 Rhode Island, Ca, 94107", "jobAddress": "1400 Geary Blvd", "homeLat": 37.7562, "homeLng": -122.4048 },
-            { "firstName": "Tierren", "lastName": "Anderson", "homeAddress": "883 Athens Ave, Ca, 94607-3427", "jobAddress": "181 Fremont St", "homeLat": 37.8105, "homeLng": -122.2929 },
-            { "firstName": "Dasheana", "lastName": "Davis", "homeAddress": "1400 Fairway Dr, Ca, 94577", "jobAddress": "5959 Shellmound Street", "homeLat": 37.7214, "homeLng": -122.1585 },
-            { "firstName": "Tamika", "lastName": "Freeman", "homeAddress": "7206 Orral St, Ca, 94621-3140", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.7552, "homeLng": -122.1793 },
-            { "firstName": "Irie", "lastName": "Frayer", "homeAddress": "203 Diamond Cove Ter, Ca, 94134-3376", "jobAddress": "633 Folsom St Ste 100", "homeLat": 37.7126, "homeLng": -122.4025 },
-            { "firstName": "Matt", "lastName": "Menacho", "homeAddress": "278 Allison St, Ca, 94112-4311", "jobAddress": "181 Fremont St", "homeLat": 37.7126, "homeLng": -122.4411 },
-            { "firstName": "Aireyn", "lastName": "Taylor-Hunter", "homeAddress": "915 52nd St, Ca, 94608-3436", "jobAddress": "101 S 200 E", "homeLat": 37.8384, "homeLng": -122.2858 },
-            { "firstName": "Luiz", "lastName": "Ortiz", "homeAddress": "2112 Marina Blvd, Ca, 94577-3210", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7011, "homeLng": -122.1643 },
-            { "firstName": "Brandon", "lastName": "Monteiro", "homeAddress": "55 Valle Vista Ave Apt 708, Ca, 94590-3140", "jobAddress": "456 Montgomery St", "homeLat": 37.9333, "homeLng": -122.3615 },
-            { "firstName": "Peter III", "lastName": "Relles", "homeAddress": "1278 Market St # 203, Ca, 94102", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7774, "homeLng": -122.417 },
-            { "firstName": "Jamel", "lastName": "Aljamal", "homeAddress": "2015 19th Ave, CA, 94606-4104", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.78, "homeLng": -122.247 },
-            { "firstName": "Beverly", "lastName": "Johnson", "homeAddress": "1426 3rd Ave Apt 3, Ca, 94606-2265", "jobAddress": "30 Grant Ave", "homeLat": 37.7865, "homeLng": -122.2536 },
-            { "firstName": "Jalen", "lastName": "Esteen", "homeAddress": "16230 Maubert Ave, CA, 94578-2110", "jobAddress": "1200 Van Ness Ave", "homeLat": 37.6974, "homeLng": -122.1129 },
-            { "firstName": "Stanley", "lastName": "Moumolua", "homeAddress": "2510 West St, Ca, 94612-1128", "jobAddress": "115 Sansome St", "homeLat": 37.8157, "homeLng": -122.2778 },
-            { "firstName": "Muhammad Uzair", "lastName": "Mumtaz", "homeAddress": "638 Franklin Ln, Ca, 94803-1410", "jobAddress": "599 Skyline Blvd", "homeLat": 38.0264, "homeLng": -122.2749 },
-            { "firstName": "Gremelt", "lastName": "Balladares Garcia", "homeAddress": "676 Brunswick St, Ca, 94112-4203", "jobAddress": "201 Mission St", "homeLat": 37.7126, "homeLng": -122.4332 },
-            { "firstName": "Jahnay", "lastName": "James", "homeAddress": "2755 San Bruno Ave Unit 347074, Ca, 94134-1550", "jobAddress": "600 California St", "homeLat": 37.728, "homeLng": -122.4048 },
-            { "firstName": "Issack", "lastName": "Jones", "homeAddress": "2425 Valdez Street, Ca, 94612", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.8143, "homeLng": -122.2647 },
-            { "firstName": "Erielle", "lastName": "Hammonds", "homeAddress": "1126 E Leland Rd Apt 269, Ca, 94565-7519", "jobAddress": "181 Fremont St", "homeLat": 37.9942, "homeLng": -122.0163 },
-            { "firstName": "Manar", "lastName": "Qaadoun", "homeAddress": "729 Jones St Apt 407, Ca, 94109-6423", "jobAddress": "1200 Van Ness Ave", "homeLat": 37.7877, "homeLng": -122.4137 },
-            { "firstName": "Inam", "lastName": "Ullah", "homeAddress": "499 Violet Rd, CA, 94547-1032", "jobAddress": "2801 Shadelands Dr", "homeLat": 37.9942, "homeLng": -122.3615 },
-            { "firstName": "Micheal", "lastName": "Jones", "homeAddress": "765 Ofarrell St Apt 26, CA, 94109-7145", "jobAddress": "1 Kearny St", "homeLat": 37.7865, "homeLng": -122.4172 },
-            { "firstName": "Ruth", "lastName": "Mendoza", "homeAddress": "1063 47th St Unit C, Ca, 94608-3479", "jobAddress": "601 California St", "homeLat": 37.8354, "homeLng": -122.2858 },
-            { "firstName": "Alan", "lastName": "Zer", "homeAddress": "440 Hyde St Apt 6, Ca, 94109-7470", "jobAddress": "101 Mission St", "homeLat": 37.7852, "homeLng": -122.4162 },
-            { "firstName": "Isai", "lastName": "Torres", "homeAddress": "3818 Roosevelt Ave, Ca, 94805-1843", "jobAddress": "425 Market St", "homeLat": 37.949, "homeLng": -122.3332 },
-            { "firstName": "Kenneth", "lastName": "McAllister", "homeAddress": "1636 Oregon St, CA, 94703-2006", "jobAddress": "1200 Van Ness Ave", "homeLat": 37.8596, "homeLng": -122.2801 },
-            { "firstName": "Caroline", "lastName": "Mwanguhya", "homeAddress": "6706 MacArthur Blvd Apt 5, Ca, 94605-2167", "jobAddress": "100 Montgomery St", "homeLat": 37.7602, "homeLng": -122.1868 },
-            { "firstName": "Kaia", "lastName": "Hines", "homeAddress": "1608 Thomas Ave, CA, 94124-2350", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.737, "homeLng": -122.392 },
-            { "firstName": "Basil", "lastName": "Martin", "homeAddress": "9315 Vista Ct, Ca, 94603-1913", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.7327, "homeLng": -122.1793 },
-            { "firstName": "Cody", "lastName": "Jolley-Branham", "homeAddress": "2210 Highlands Rd, Ca, 94806-1044", "jobAddress": "400 Paul Ave", "homeLat": 37.9546, "homeLng": -122.3082 },
-            { "firstName": "Hayat", "lastName": "Radi", "homeAddress": "737 Bush St Unit 507, Ca, 94108-3401", "jobAddress": "1280 Laguna St", "homeLat": 37.79, "homeLng": -122.4104 },
-            { "firstName": "Kahari", "lastName": "Morgan", "homeAddress": "1203 Lakeview Cir, Ca, 94565-4250", "jobAddress": "2801 Shadelands Dr", "homeLat": 37.9701, "homeLng": -122.0567 },
-            { "firstName": "Itishia", "lastName": "Hunt", "homeAddress": "1917 Grande Circle, Ca, 94533", "jobAddress": "400 Paul Ave", "homeLat": 38.2587, "homeLng": -122.2536 },
-            { "firstName": "Autumn", "lastName": "Spikes", "homeAddress": "198 Crolls Garden Ct, Ca, 94501-3885", "jobAddress": "3129 Corporate Pl", "homeLat": 37.7733, "homeLng": -122.228 },
-            { "firstName": "Shawn", "lastName": "Pierson", "homeAddress": "5627 Telegraph Ave, Ca, 94609-1707", "jobAddress": "120 Kearny St", "homeLat": 37.8416, "homeLng": -122.2647 },
-            { "firstName": "Nikita", "lastName": "Smith", "homeAddress": "434 E 17th St Apt 114, CA, 94606-1871", "jobAddress": "300 Frank H Ogawa Plz", "homeLat": 37.7854, "homeLng": -122.2612 },
-            { "firstName": "Kd", "lastName": "Sibley", "homeAddress": "1743 12th Ave Apt D, Ca, 94606-3842", "jobAddress": "1970 Broadway Ste 840", "homeLat": 37.7818, "homeLng": -122.247 },
-            { "firstName": "Delvon", "lastName": "Emerson", "homeAddress": "1246 77th Ave, Ca, 94621-2700", "jobAddress": "2801 Shadelands Dr", "homeLat": 37.7552, "homeLng": -122.1868 },
-            { "firstName": "Tasajanae", "lastName": "Madkins", "homeAddress": "621 23rd St Apt 1, Ca, 94612-1767", "jobAddress": "1955 Broadway", "homeLat": 37.8143, "homeLng": -122.2749 },
-            { "firstName": "Ericka", "lastName": "Foster", "homeAddress": "2121 Wood St Apt 203, Ca, 94607-1743", "jobAddress": "1970 Broadway Ste 810", "homeLat": 37.8184, "homeLng": -122.2858 },
-            { "firstName": "Ashley", "lastName": "Ramos", "homeAddress": "1515 Webster St, CA, 94612-3355", "jobAddress": "1970 Broadway Ste 810", "homeLat": 37.807, "homeLng": -122.2647 },
-            { "firstName": "Sparkle", "lastName": "Edwards", "homeAddress": "2900 Pullman Ave Apt 132, Ca, 94804-3153", "jobAddress": "300 Frank H Ogawa Plz", "homeLat": 37.9157, "homeLng": -122.3392 },
-            { "firstName": "Simranpal", "lastName": "Singh", "homeAddress": "3550 Carter Drive, Ca, 94080", "jobAddress": "1 La Avanzada St", "homeLat": 37.4916, "homeLng": -122.4789 },
-            { "firstName": "Tiffany", "lastName": "Chang", "homeAddress": "39 Sargent St, Ca, 94132-3144", "jobAddress": "750 Battery St", "homeLat": 37.7214, "homeLng": -122.4716 },
-            { "firstName": "Deisy", "lastName": "Martinez Fernandez", "homeAddress": "765 Geary Street, Ca, 94105", "jobAddress": "425 Market St", "homeLat": 37.7872, "homeLng": -122.4158 },
-            { "firstName": "Kenyada", "lastName": "Dismuke", "homeAddress": "9400 International Blvd, Ca, 94603-1444", "jobAddress": "180 Montgomery St Ste 700", "homeLat": 37.7327, "homeLng": -122.174 },
-            { "firstName": "Melvin", "lastName": "Price", "homeAddress": "981 Mission St, Ca, 94103-2912", "jobAddress": "181 Fremont St", "homeLat": 37.7801, "homeLng": -122.4109 },
-            { "firstName": "Jychelle", "lastName": "George", "homeAddress": "2201 San Jose Drive, Ca, 94509", "jobAddress": "1400 Geary Blvd", "homeLat": 37.973, "homeLng": -121.9442 },
-            { "firstName": "Marlow", "lastName": "Lee", "homeAddress": "1406 Seminary Ave Apt A, Ca, 94621-4211", "jobAddress": "3100 San Pablo Ave", "homeLat": 37.7667, "homeLng": -122.2033 },
-            { "firstName": "Roberto", "lastName": "Avalos", "homeAddress": "2736 Mission St Apt 1, CA, 94110-3104", "jobAddress": "210 Post St", "homeLat": 37.7523, "homeLng": -122.4187 }
-        ];
-
-        // --- MAP INITIALIZATION & LOGIC --- //
-        let mapInitialized = false;
-
-        const relieverColors = {
-            "Adham Shaef": "#2980b9",       // Purple
-            "Apithany Hayes": "Black", // Green
-            "Eli Walin": "white",       // Blue
-            "Imran Anwar": "green",    // Orange
-            "Melaysia Horn": "#c0392b", // Red
-            "Yolanda Perez": "yellow"       // Cyan
-        };
-        
-        const floaterData = {
-            "O. Obazee": ["101 M", "425 C", "475 S", "CJM", "222 K", "150 S", "71 S", "456 M", "425 M", "601 C", "55 H", "1280 L", "1400 G", "220 M", "100 M", "717 M", "210 P", "170 ML", "600 C", "115 S", "1800 M", "111 P", "599 S", "Sutro", "501 2nd", "420 23rd"],
-            "L. White": ["100 M", "500 H", "425 M", "1280 L", "210 P", "1128 M", "1400 G", "220 M", "369 P", "71 S", "55 H", "30 ML", "717 M", "456 M", "222 K", "500 P", "425 C", "90 NM", "601 C", "150 S"],
-            "D. Ozabuki": ["101 M", "1635 D", "240 S", "26 O", "600 C", "CJM", "475 S", "71 S", "1280 L", "210 P", "456 M", "153 K", "633 F", "115 S", "717 M"],
-            "R. Seddi": ["150 P", "1128 M", "311 C", "1019 M", "1635 D", "90 NM", "26 O", "30 G", "210 P", "30 ML", "153 K", "170 ML"],
-            "E. Oldokh": ["CJM", "1128 M", "210 P", "1700 C", "350 P"],
-            "J. Ngilbus": ["201 M", "1400 G", "30 G", "111 P", "220 M"],
-            "Y. Farogbe": ["181 F", "750 B", "101 M", "222 K", "CJM", "1019 M", "90 NM", "220 M"],
-            "C. Rimer": ["30 ML", "170 ML", "369 P", "600 C", "1280 L"],
-            "D. Monte": ["150 P", "101 Mi", "26 O", "111 P", "153 K", "425 C", "101 M", "210 P", "230 C", "220 M"],
-            "I. Jones": ["750 B", "222 K", "230 C", "101 Mi", "180 M", "711 E", "1635 D"]
-        };
-
-        function initializeMapApplication() {
-            if (mapInitialized) return;
-
-            const map = L.map('map').setView([37.7749, -122.4194], 13);
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
-            }).addTo(map);
-
-            const allSitesLayer = L.layerGroup().addTo(map);
-            const routeLayer = L.layerGroup().addTo(map);
-            const officerLayer = L.layerGroup().addTo(map);
-            const highlightLayer = L.layerGroup().addTo(map);
-
-            const managerLegend = document.getElementById('manager-legend-container');
-            const reliefLegend = document.getElementById('relief-legend-container');
-
-            const allSitesList = Object.values(sites).flat();
-            const siteLookup = new Map(allSitesList.map(site => [site.name, site]));
-
-            window.showOfficersForSite = (siteName) => {
-                const site = siteLookup.get(siteName);
-                if (site) {
-                    displaySiteOfficers(site);
-                }
-            };
-            
-            function findSiteBySearchTerm(searchTerm) {
-                if (!searchTerm) return null;
-                const normalizedSearch = searchTerm.toLowerCase().trim().replace(/\.$/, '');
-                
-                let foundSite = allSitesList.find(site => site.name.toLowerCase().trim() === normalizedSearch);
-                if (foundSite) return foundSite;
-
-                foundSite = allSitesList.find(site => site.address.toLowerCase().trim() === normalizedSearch);
-                if (foundSite) return foundSite;
-
-                return allSitesList.find(site => 
-                    site.name.toLowerCase().includes(normalizedSearch) ||
-                    site.address.toLowerCase().includes(normalizedSearch)
-                );
-            }
-            
-            function formatMilitaryTime(time) {
-                if (time === null || time === undefined) return '';
-                const timeStr = String(time).padStart(4, '0');
-                const hours = parseInt(timeStr.substring(0, 2), 10);
-                const minutes = timeStr.substring(2, 4);
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                const displayHours = hours % 12 || 12; // convert 0 to 12
-                return `${displayHours}:${minutes} ${ampm}`;
-            }
-
-            function createColoredIcon(color, options = {}) {
-                const { opacity = 1.0, scale = 1.0 } = options;
-                const size = 32 * scale;
-                const iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="${size}px" height="${size}px" style="opacity: ${opacity}; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>`;
-                return L.divIcon({ html: iconHtml, className: '', iconSize: [size, size], iconAnchor: [size / 2, size], popupAnchor: [0, -size] });
-            }
-
-            function createHomeIcon() {
-                const iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6b7280" width="30px" height="30px" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`;
-                return L.divIcon({
-                    html: iconHtml,
-                    className: '',
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 30],
-                    popupAnchor: [0, -30]
-                });
-            }
-            
-            function displayAllSites() {
-                allSitesLayer.clearLayers();
-                routeLayer.clearLayers();
-                officerLayer.clearLayers();
-                highlightLayer.clearLayers();
-                managerLegend.style.opacity = 1;
-                reliefLegend.classList.add('hidden');
-                Object.entries(sites).forEach(([manager, locations]) => {
-                    const color = managerColors[manager] || '#3388ff';
-                    const icon = createColoredIcon(color);
-                    locations.forEach(site => {
-                        const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
-                        const popupContent = `
-                            <b>${site.name}</b><br>
-                            ${site.address}<br>
-                            <small>Manager: ${manager}</small>
-                            <br>
-                            <button class="popup-button" onclick="showOfficersForSite('${site.name.replace(/'/g, "\\'")}')">
-                                Show Officers
-                            </button>
-                        `;
-                        marker.bindPopup(popupContent, {className: 'custom-popup'});
-                    });
-                });
-            }
-
-            function displayZoneSites(zoneName) {
-                allSitesLayer.clearLayers();
-                routeLayer.clearLayers();
-                officerLayer.clearLayers();
-                highlightLayer.clearLayers();
-                managerLegend.style.opacity = 1;
-                reliefLegend.classList.add('hidden');
-
-                const siteNamesInZone = opsZones[zoneName] || [];
-                const bounds = [];
-
-                siteNamesInZone.forEach(siteIdentifier => {
-                    const site = findSiteBySearchTerm(siteIdentifier.split(' - ')[1] || siteIdentifier);
-                    if (site) {
-                        let manager = 'Unknown';
-                        let color = '#808080';
-                        for (const [mgr, siteList] of Object.entries(sites)) {
-                            if (siteList.some(s => s.name === site.name)) {
-                                manager = mgr;
-                                color = managerColors[mgr];
-                                break;
-                            }
-                        }
-
-                        const icon = createColoredIcon(color);
-                        const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
-
-                        const popupContent = `
-                            <b>${site.name}</b><br>
-                            ${site.address}<br>
-                            <small>Manager: ${manager}</small>
-                            <br>
-                            <button class="popup-button" onclick="showOfficersForSite('${site.name.replace(/'/g, "\\'")}')">
-                                Show Officers
-                            </button>
-                        `;
-                        marker.bindPopup(popupContent, {className: 'custom-popup'});
-                        bounds.push([site.lat, site.lng]);
-                    }
-                });
-
-                if (bounds.length > 0) {
-                    map.fitBounds(bounds, { padding: [50, 50] });
-                }
-            }
-
-            function displayColdStarts(coldStartsData, dayTitle) {
-                document.getElementById('cold-starts-day-selector').classList.add('hidden');
-                document.getElementById('cold-starts-list-container').classList.remove('hidden');
-                document.getElementById('cold-starts-title').textContent = `Cold Starts - ${dayTitle}`;
-                
-                allSitesLayer.clearLayers();
-                routeLayer.clearLayers();
-                officerLayer.clearLayers();
-                highlightLayer.clearLayers();
-                managerLegend.style.opacity = 1;
-                reliefLegend.classList.add('hidden');
-
-                const listContainer = document.getElementById('cold-starts-list');
-                listContainer.innerHTML = '';
-                const bounds = [];
-
-                const sitesWithColdStarts = new Map();
-                coldStartsData.forEach(start => {
-                    const site = findSiteBySearchTerm(start.site);
-                    if (site) {
-                        if (!sitesWithColdStarts.has(site.name)) {
-                            sitesWithColdStarts.set(site.name, {
-                                siteInfo: site,
-                                starts: []
-                            });
-                        }
-                        sitesWithColdStarts.get(site.name).starts.push(start);
-                    }
-                });
-
-                const sortedStarts = [...coldStartsData].sort((a, b) => a.time - b.time);
-                sortedStarts.forEach((start, index) => {
-                    const site = findSiteBySearchTerm(start.site);
-                    if (!site) return;
-
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'group p-1.5 rounded-lg bg-white text-gray-900 shadow-xl shadow-white/30 cursor-pointer hover:bg-black hover:text-white transition-colors duration-200 animate-slide-in-up';
-                    itemDiv.style.animationDelay = `${index * 30}ms`;
-                    itemDiv.innerHTML = `
-                        <div class="text-amber-600 group-hover:text-amber-400 font-mono text-[11px]">${formatMilitaryTime(start.time)}</div>
-                        <div class="text-[10px] text-gray-500 group-hover:text-gray-400 truncate">${site.address}</div>
-                        <div class="text-xs text-gray-900 group-hover:text-white">${start.officer}</div>
-                    `;
-                    itemDiv.onclick = () => {
-                        highlightLayer.clearLayers();
-                        const highlightIcon = createColoredIcon('#000000', { scale: 1.2 });
-                        L.marker([site.lat, site.lng], { icon: highlightIcon, zIndexOffset: 2000 }).addTo(highlightLayer);
-                        map.setView([site.lat, site.lng], 16);
-                    };
-                    listContainer.appendChild(itemDiv);
-                });
-
-                sitesWithColdStarts.forEach(({ siteInfo, starts }) => {
-                    let manager = 'Unknown';
-                    let color = '#808080';
-                    for (const [mgr, siteList] of Object.entries(sites)) {
-                        if (siteList.some(s => s.name === siteInfo.name)) {
-                            manager = mgr;
-                            color = managerColors[mgr];
-                            break;
-                        }
-                    }
-
-                    const icon = createColoredIcon(color);
-                    const marker = L.marker([siteInfo.lat, siteInfo.lng], { icon: icon }).addTo(allSitesLayer);
-
-                    const startDetails = starts
-                        .sort((a,b) => a.time - b.time)
-                        .map(s => `<li><span class="font-mono">${formatMilitaryTime(s.time)}</span> - ${s.officer}</li>`)
-                        .join('');
-
-                    const popupContent = `
-                        <b>${siteInfo.name}</b><br>
-                        <small>${siteInfo.address}</small><br>
-                        <hr class="my-1 border-gray-400">
-                        <b>Cold Starts:</b>
-                        <ul class="list-disc pl-5 mt-1 text-xs">
-                            ${startDetails}
-                        </ul>
-                    `;
-                    marker.bindPopup(popupContent, {className: 'custom-popup'});
-                    bounds.push([siteInfo.lat, siteInfo.lng]);
-                });
-
-                if (bounds.length > 0) {
-                    map.fitBounds(bounds, { padding: [50, 50] });
-                }
-            }
-
-
-            function plotOfficers(officerList) {
-                officerLayer.clearLayers();
-                const officerIcon = createColoredIcon('#111827', { scale: 0.7 });
-
-                officerList.forEach(officer => {
-                    if (officer.homeLat && officer.homeLng) {
-                        const homeMarker = L.marker([officer.homeLat, officer.homeLng], { icon: officerIcon })
-                            .addTo(officerLayer);
-                        homeMarker.bindPopup(`<b>${officer.firstName} ${officer.lastName}</b><br>${officer.homeAddress}`, {className: 'custom-popup'});
-                    }
-                });
-            }
-
-            function displayAllOfficersAndSites() {
-                displayAllSites();
-                plotOfficers(officers);
-                map.setView([37.7749, -122.4194], 12);
-            }
-
-            function displayOnlyReliefSites() {
-                routeLayer.clearLayers();
-                allSitesLayer.clearLayers();
-                officerLayer.clearLayers();
-                highlightLayer.clearLayers();
-                managerLegend.style.opacity = 0;
-                reliefLegend.classList.remove('hidden');
-
-                const reliefLegendList = document.getElementById('relief-legend-list');
-                reliefLegendList.innerHTML = '';
-                Object.keys(relieverColors).sort().forEach(relieverName => {
-                    const color = relieverColors[relieverName];
-                    const legendItem = document.createElement('div');
-                    legendItem.className = 'flex items-center space-x-2 animate-slide-in-up';
-                    legendItem.style.animationDelay = `${Object.keys(relieverColors).sort().indexOf(relieverName) * 50}ms`;
-                    legendItem.innerHTML = `
-                        <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${color};"></div>
-                        <span class="text-[11px] text-gray-200">${relieverName}</span>
-                    `;
-                    reliefLegendList.appendChild(legendItem);
-                });
-
-                const siteToRelieversMap = new Map();
-                Object.entries(breakReliefs).forEach(([relieverName, relief]) => {
-                    relief.schedule.forEach(item => {
-                        if (!item.isBreak) {
-                            const site = findSiteBySearchTerm(item.locationName);
-                            if (site) {
-                                if (!siteToRelieversMap.has(site.name)) {
-                                    siteToRelieversMap.set(site.name, { site: site, relievers: new Set() });
-                                }
-                                siteToRelieversMap.get(site.name).relievers.add(relieverName);
-                            }
-                        }
-                    });
-                });
-
-                const reliefBounds = [];
-                siteToRelieversMap.forEach(({ site, relievers }) => {
-                    const relieverList = Array.from(relievers);
-                    const color = relieverColors[relieverList[0]] || '#3388ff';
-                    const popupText = `Reliever: ${relieverList.join(', ')}`;
-
-                    const icon = createColoredIcon(color, { scale: 0.9 });
-                    const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
-                     const popupContent = `
-                        <b>${site.name}</b><br>
-                        ${site.address}<br>
-                        <small>${popupText}</small>
-                        <br>
-                        <button class="popup-button" onclick="showOfficersForSite('${site.name.replace(/'/g, "\\'")}')">
-                            Show Officers
-                        </button>
-                    `;
-                    marker.bindPopup(popupContent, {className: 'custom-popup'});
-                    reliefBounds.push([site.lat, site.lng]);
-                });
-
-                if (reliefBounds.length > 0) {
-                    map.fitBounds(reliefBounds, { padding: [50, 50] });
-                }
-            }
-
-            function displayRoute(employeeName) {
-                routeLayer.clearLayers();
-                allSitesLayer.clearLayers();
-                officerLayer.clearLayers();
-                highlightLayer.clearLayers();
-                managerLegend.style.opacity = 0;
-                reliefLegend.classList.add('hidden');
-                
-                const relief = breakReliefs[employeeName];
-
-                if (!relief) return;
-
-                const routePoints = [];
-                const aggregatedStops = {};
-                let stopCounter = 1;
-
-                const scheduleContainer = document.getElementById('route-schedule');
-                scheduleContainer.innerHTML = '';
-                
-                relief.schedule.forEach((item, index) => {
-                    const scheduleItemDiv = document.createElement('div');
-                    scheduleItemDiv.className = 'animate-slide-in-up';
-                    scheduleItemDiv.style.animationDelay = `${index * 50}ms`;
-                    
-                    if (item.isBreak) {
-                        scheduleItemDiv.classList.add('p-1.5', 'rounded-lg', 'bg-gray-800/50');
-                        scheduleItemDiv.innerHTML = `
-                            <div class="text-amber-400 text-xs">${item.locationName}</div>
-                            ${item.startTime ? `<div class="text-[10px] text-gray-400">${item.startTime} - ${item.endTime}</div>` : ''}
-                        `;
-                    } else {
-                        scheduleItemDiv.classList.add('p-1.5', 'rounded-lg', 'bg-gray-700/50', 'border', 'border-gray-600/50');
-                        const site = findSiteBySearchTerm(item.locationName);
-                        if (site) {
-                            scheduleItemDiv.innerHTML = `
-                                <div class="text-white text-xs"><span class="text-gray-400">${stopCounter}.</span> ${site.name}</div>
-                                <div class="text-[10px] text-gray-400 pl-3">${item.startTime} - ${item.endTime}</div>
-                                <div class="text-[10px] text-gray-500 pl-3">${site.address}</div>
-                            `;
-                            routePoints.push([site.lat, site.lng]);
-                            
-                            const key = `${site.lat},${site.lng}`;
-                            if (!aggregatedStops[key]) {
-                                aggregatedStops[key] = { lat: site.lat, lng: site.lng, name: site.name, stopNums: [] };
-                            }
-                            aggregatedStops[key].stopNums.push(stopCounter);
-                        } else {
-                             scheduleItemDiv.innerHTML = `
-                                <div class="text-red-400 text-xs">${stopCounter}. Location not found</div>
-                                <div class="text-[10px] text-red-500">${item.locationName}</div>`;
-                        }
-                        stopCounter++;
-                    }
-                    scheduleContainer.appendChild(scheduleItemDiv);
-                });
-                
-                if (routePoints.length > 1) {
-                    L.polyline(routePoints, { color: relieverColors[employeeName] || '#3388ff', weight: 4, opacity: 0.8 }).addTo(routeLayer);
-                }
-
-                Object.values(aggregatedStops).forEach(stop => {
-                    const stopNumbersText = stop.stopNums.join(',');
-                    const iconWidth = 10 * stopNumbersText.length + 20;
-                    
-                    const siteColor = relieverColors[employeeName];
-                    if (siteColor) {
-                        const bgIcon = createColoredIcon(siteColor, { opacity: 0.8, scale: 1.1 });
-                        L.marker([stop.lat, stop.lng], { icon: bgIcon }).addTo(routeLayer);
-                    }
-
-                    const numberIcon = L.divIcon({ 
-                        className: 'route-marker-icon', 
-                        html: `<span class="text-sm">${stopNumbersText}</span>`, 
-                        iconSize: [iconWidth, 24], 
-                        iconAnchor: [iconWidth / 2, 12] 
-                    });
-                    L.marker([stop.lat, stop.lng], { icon: numberIcon, zIndexOffset: 1000 })
-                        .bindPopup(`<b>Stops ${stopNumbersText}: ${stop.name}</b>`, {className: 'custom-popup'})
-                        .addTo(routeLayer);
-                });
-                
-                if (routePoints.length > 0) {
-                    map.fitBounds(routePoints, { padding: [50, 50] });
-                }
-
-                document.getElementById('route-employee-name').textContent = `${employeeName}'s Route`;
-                
-                switchView(routeInfoSection);
-            }
-            
-            function displaySiteOfficers(site) {
-                allSitesLayer.clearLayers();
-                routeLayer.clearLayers();
-                officerLayer.clearLayers();
-                highlightLayer.clearLayers();
-                managerLegend.style.opacity = 0;
-                reliefLegend.classList.add('hidden');
-
-                const bounds = [[site.lat, site.lng]];
-
-                let siteManager = 'Unknown';
-                let siteColor = '#3388ff';
-                 for (const [manager, locations] of Object.entries(sites)) {
-                    if (locations.some(s => s.name === site.name)) {
-                        siteManager = manager;
-                        siteColor = managerColors[manager];
-                        break;
-                    }
-                }
-
-                const siteIcon = createColoredIcon(siteColor, { scale: 1.2 });
-                L.marker([site.lat, site.lng], { icon: siteIcon, zIndexOffset: 1000 })
-                    .bindPopup(`<b>${site.name}</b><br>${site.address}<br><small>Manager: ${siteManager}</small>`, {className: 'custom-popup'})
-                    .addTo(allSitesLayer).openPopup();
-
-                const officerListContainer = document.getElementById('officer-list');
-                officerListContainer.innerHTML = '';
-                document.getElementById('officer-site-name').textContent = site.name;
-
-                const siteOfficers = officers.filter(officer => {
-                    if(!officer.jobAddress) return false;
-                    const normalizedJobAddr = officer.jobAddress.toLowerCase().replace(/ste|suite|apt|#|unit|piz/g, '').replace(/\s+/g, ' ').trim();
-                    const normalizedSiteAddr = site.address.toLowerCase().replace(/ste|suite|apt|#|unit|piz/g, '').replace(/\s+/g, ' ').trim();
-                    return normalizedSiteAddr.includes(normalizedJobAddr) || normalizedJobAddr.includes(normalizedSiteAddr);
-                });
-
-
-                if (siteOfficers.length > 0) {
-                    const homeIcon = createHomeIcon();
-                    siteOfficers.forEach((officer, index) => {
-                        const officerDiv = document.createElement('div');
-                        officerDiv.className = 'group p-1.5 rounded-lg bg-white text-gray-900 shadow-xl shadow-white/30 hover:bg-black hover:text-white transition-colors duration-200 animate-slide-in-up cursor-pointer';
-                        officerDiv.style.animationDelay = `${index * 50}ms`;
-                        officerDiv.innerHTML = `
-                            <div class="text-xs text-gray-900 group-hover:text-white">${officer.firstName} ${officer.lastName}</div>
-                            <div class="text-[10px] text-gray-500 group-hover:text-gray-400">${officer.homeAddress}</div>
-                        `;
-                        officerDiv.onclick = () => {
-                            if (officer.homeLat && officer.homeLng) {
-                                highlightLayer.clearLayers();
-                                const homeHighlightIcon = createColoredIcon('#000000', { scale: 1.1 });
-                                L.marker([officer.homeLat, officer.homeLng], { icon: homeHighlightIcon, zIndexOffset: 2000 }).addTo(highlightLayer);
-                                map.setView([officer.homeLat, officer.homeLng], 15);
-                            }
-                        };
-                        officerListContainer.appendChild(officerDiv);
-
-                        if (officer.homeLat && officer.homeLng) {
-                            const homeMarker = L.marker([officer.homeLat, officer.homeLng], { icon: homeIcon })
-                                .addTo(officerLayer);
-                            homeMarker.bindPopup(`<b>${officer.firstName} ${officer.lastName}'s Home</b><br>${officer.homeAddress}`, {className: 'custom-popup'});
-                            bounds.push([officer.homeLat, officer.homeLng]);
-                        }
-                    });
-                } else {
-                       const noOfficerDiv = document.createElement('div');
-                       noOfficerDiv.className = 'p-3 rounded-lg bg-gray-800/50 text-gray-400';
-                       noOfficerDiv.textContent = 'No primary officers found for this site in the provided data.';
-                       officerListContainer.appendChild(noOfficerDiv);
-                }
-
-                if (bounds.length > 1) {
-                    map.fitBounds(bounds, { padding: [50, 50] });
-                } else {
-                    map.setView([site.lat, site.lng], 15);
-                }
-
-                switchView(officerListView);
-            }
-
-            // --- Floater Logic Start ---
-            const siteAbbreviations = {
-                "CJM": "The Contemporary Jewish Museum", "Sutro": "Sutro Tower, Inc", "101 M": "JLL - 101 Montgomery St", "425 C": "JLL - 425 California St",
-                "222 K": "Flynn Properties - 222 Kearny St", "150 S": "JLL - 150 Spear St", "71 S": "CW - 71 Stevenson St", "456 M": "CW - 456 Montgomery St",
-                "425 M": "CW - 425 Market St", "601 C": "ECP - 601 California St", "1280 L": "WPA - 1280 Laguna", "1400 G": "Sequoias",
-                "220 M": "Swig - 220 Montgomery St", "100 M": "Van Barton - 100 Montgomery", "717 M": "Colliers - 717 Market St", "210 P": "Transwestern - 210 Post St",
-                "170 ML": "YCS Investments - 170 Maiden Lane", "600 C": "JLL - 600 California St", "115 S": "Van Barton - 115 Sansome", "1800 M": "AJ Capital Partners",
-                "111 P": "Doublewood Investment", "599 S": "Olympic Club Lakeside", "501 2nd": "Swig - 501 2nd St", "420 23rd": "The Potrero Power Station",
-                "500 H": "CBRE - 500 Howard St", "30 ML": "Seaker & Sons", "500 P": "CBRE - 500 Pine", "90 NM": "JKL Corporation",
-                "1635 D": "Tusker Corporation", "240 S": "Colliers - 240 Stockton St", "26 O": "Colliers - 26 O'Farrell St", "633 F": "Swig - 633 Folsom St",
-                "153 K": "Colliers - 153 Kearny St", "150 P": "TMG LLC - 150 Post St", "311 C": "Seligman - 311 California St", "1019 M": "Transwestern - 1019 Market St",
-                "30 G": "G&G Partners", "201 M": "JLL - 201 Mission St", "181 F": "181 Fremont Street", "750 B": "RREG - 750 Battery Corp.",
-                "101 MI": "Van Barton - 101 Mission", "180 M": "CBRE - 180 Montgomery", "711 E": "EPA - 711 Eddy St", "1128 M": "CBRE - 1128 Market St",
-                "230 C": "Metrovation"
-            };
-
-            function findOfficerByAbbreviatedName(name) {
-                const parts = name.split('. ');
-                if (parts.length !== 2) return null;
-                const [initial, lastName] = parts;
-                return officers.find(o => o.firstName.charAt(0).toLowerCase() === initial.toLowerCase() && o.lastName.toLowerCase() === lastName.toLowerCase());
-            }
-
-            function displayAllFloaterSitesOnMap(floaterName) {
-                allSitesLayer.clearLayers();
-                routeLayer.clearLayers();
-                officerLayer.clearLayers();
-                highlightLayer.clearLayers();
-                managerLegend.style.opacity = 1;
-                reliefLegend.classList.add('hidden');
-
-                const floater = findOfficerByAbbreviatedName(floaterName);
-                const assignedSiteAbbrs = floaterData[floaterName] || [];
-                const bounds = [];
-
-                if (floater && floater.homeLat && floater.homeLng) {
-                    const blackPin = createColoredIcon('black', {scale: 0.9});
-                    L.marker([floater.homeLat, floater.homeLng], { icon: blackPin, zIndexOffset: 2000 })
-                        .bindPopup(`<b>${floater.firstName} ${floater.lastName}</b><br>Home Address`, {className: 'custom-popup'})
-                        .addTo(officerLayer);
-                    bounds.push([floater.homeLat, floater.homeLng]);
-                }
-                
-                assignedSiteAbbrs.forEach(abbr => {
-                    const siteAbbrKey = Object.keys(siteAbbreviations).find(key => key.toLowerCase() === abbr.toLowerCase());
-                    const targetSiteName = siteAbbreviations[siteAbbrKey];
-
-                    if (targetSiteName) {
-                        const site = findSiteBySearchTerm(targetSiteName);
-                        
-                        if (site) {
-                            let manager = 'Unknown';
-                            let color = '#808080';
-                            for (const [mgr, siteList] of Object.entries(sites)) {
-                                if (siteList.some(s => s.name === site.name)) {
-                                    manager = mgr;
-                                    color = managerColors[mgr];
-                                    break;
-                                }
-                            }
-                            const icon = createColoredIcon(color);
-                            const marker = L.marker([site.lat, site.lng], { icon: icon }).addTo(allSitesLayer);
-                            const popupContent = `
-                                <b>${site.name}</b><br>
-                                ${site.address}<br>
-                                <small>Manager: ${manager}</small>`;
-                            marker.bindPopup(popupContent, {className: 'custom-popup'});
-                            bounds.push([site.lat, site.lng]);
-                        }
-                    }
-                });
-
-                if(bounds.length > 0) {
-                    map.fitBounds(bounds, { padding: [50, 50] });
-                }
-            }
-            
-            function showFloaterDetails(floaterName) {
-                displayAllFloaterSitesOnMap(floaterName);
-
-                document.getElementById('floater-name-title').textContent = `${floaterName}'s Sites`;
-                const sitesListContainer = document.getElementById('floater-sites-list');
-                sitesListContainer.innerHTML = '';
-
-                const siteSearchInput = document.getElementById('floater-site-search-input');
-                siteSearchInput.value = ''; // Clear previous search
-
-                const assignedSiteAbbrs = floaterData[floaterName] || [];
-                const siteButtons = [];
-                
-                const uniqueSiteNames = new Set();
-
-                assignedSiteAbbrs.forEach(abbr => {
-                    const siteAbbrKey = Object.keys(siteAbbreviations).find(key => key.toLowerCase() === abbr.toLowerCase());
-                    const targetSiteName = siteAbbreviations[siteAbbrKey];
-                    if (targetSiteName) {
-                        uniqueSiteNames.add(targetSiteName);
-                    }
-                });
-
-                const sortedSiteNames = Array.from(uniqueSiteNames).sort();
-
-                sortedSiteNames.forEach((targetSiteName, index) => {
-                    const site = findSiteBySearchTerm(targetSiteName);
-                    if (site) {
-                        const button = document.createElement('button');
-                        button.textContent = site.name;
-                        button.className = 'w-full text-left p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
-                        button.style.animationDelay = `${index * 30}ms`;
-                        button.onclick = () => {
-                            highlightLayer.clearLayers();
-                            const highlightIcon = createColoredIcon('black', { scale: 1.2 });
-                            L.marker([site.lat, site.lng], { icon: highlightIcon, zIndexOffset: 2000 }).addTo(highlightLayer);
-                            map.setView([site.lat, site.lng], 16);
-                        };
-                        sitesListContainer.appendChild(button);
-                        siteButtons.push(button);
-                    }
-                });
-
-                siteSearchInput.oninput = (e) => { // Use oninput for better handling
-                    const query = e.target.value.toLowerCase().trim();
-                    siteButtons.forEach(button => {
-                        const siteName = button.textContent.toLowerCase();
-                        if (siteName.includes(query)) {
-                            button.style.display = 'block';
-                        } else {
-                            button.style.display = 'none';
-                        }
-                    });
-                };
-
-                switchView(floaterSitesView);
-            }
-            // --- Floater Logic End ---
-
-            const siteSearchInput = document.getElementById('site-search-input');
-            const siteSuggestionsContainer = document.getElementById('site-suggestions');
-
-            siteSearchInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
-                siteSuggestionsContainer.innerHTML = '';
-                if (query.length < 2) return;
-
-                const filteredSites = allSitesList.filter(site => 
-                    site.name.toLowerCase().includes(query) ||
-                    site.address.toLowerCase().includes(query)
-                );
-
-                filteredSites.forEach((site, index) => {
-                    const suggestionDiv = document.createElement('div');
-                    suggestionDiv.className = 'p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white cursor-pointer animate-slide-in-up transition-colors duration-200';
-                    suggestionDiv.style.animationDelay = `${index * 30}ms`;
-                    suggestionDiv.textContent = `${site.name} - ${site.address}`;
-                    suggestionDiv.onclick = () => {
-                        siteSearchInput.value = '';
-                        siteSuggestionsContainer.innerHTML = '';
-                        displaySiteOfficers(site);
-                    };
-                    siteSuggestionsContainer.appendChild(suggestionDiv);
-                });
-            });
-
-            const legendContainer = document.getElementById('manager-legend');
-            Object.keys(managerColors).sort().forEach((name, index) => {
-                const legendItem = document.createElement('div');
-                legendItem.className = 'flex items-center space-x-2 animate-slide-in-up';
-                legendItem.style.animationDelay = `${index * 50}ms`;
-                legendItem.innerHTML = `
-                    <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${managerColors[name]};"></div>
-                    <span class="text-[11px] text-gray-200">${name}</span>`;
-                legendContainer.appendChild(legendItem);
-            });
-
-            const employeeListContainer = document.getElementById('relief-employee-list');
-            Object.keys(breakReliefs).sort().forEach((name, index) => {
-                const button = document.createElement('button');
-                button.textContent = name;
-                button.className = 'w-full text-left p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
-                button.style.animationDelay = `${index * 50}ms`;
-                button.onclick = () => displayRoute(name);
-                employeeListContainer.appendChild(button);
-            });
-
-            function displayZoneButtons() {
-                const zonesListContainer = document.getElementById('zones-list');
-                zonesListContainer.innerHTML = '';
-                Object.keys(opsZones).forEach((zoneName, index) => {
-                    const button = document.createElement('button');
-                    button.textContent = zoneName;
-                    button.className = 'w-full text-center p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
-                    button.style.animationDelay = `${index * 50}ms`;
-                    button.onclick = () => displayZoneSites(zoneName);
-                    zonesListContainer.appendChild(button);
-                });
-            }
-
-            // UI Views & State
-            const initialView = document.getElementById('initial-view');
-            const reliefListView = document.getElementById('relief-list-view');
-            const routeInfoSection = document.getElementById('route-info-section');
-            const siteSearchView = document.getElementById('site-search-view');
-            const officerListView = document.getElementById('officer-list-view');
-            const allOfficersView = document.getElementById('all-officers-view');
-            const coldStartsView = document.getElementById('cold-starts-view');
-            const zonesView = document.getElementById('zones-view');
-            const floatersView = document.getElementById('floaters-view');
-            const floaterSitesView = document.getElementById('floater-sites-view');
-            const allViews = [initialView, reliefListView, routeInfoSection, siteSearchView, officerListView, allOfficersView, coldStartsView, zonesView, floatersView, floaterSitesView];
-
-            function switchView(targetView) {
-                allViews.forEach(view => {
-                    if (view !== targetView) {
-                        view.classList.add('hidden');
-                    }
-                });
-                targetView.classList.remove('hidden');
-            }
-            
-            // Event Listeners
-            document.getElementById('show-relief-routes-btn').addEventListener('click', () => {
-                switchView(reliefListView);
-                displayOnlyReliefSites();
-            });
-
-             document.getElementById('show-zones-btn').addEventListener('click', () => {
-                switchView(zonesView);
-                displayZoneButtons();
-                allSitesLayer.clearLayers();
-                officerLayer.clearLayers();
-                routeLayer.clearLayers();
-                highlightLayer.clearLayers();
-            });
-
-            document.getElementById('show-floaters-btn').addEventListener('click', () => {
-                switchView(floatersView);
-                const floatersListContainer = document.getElementById('floaters-list');
-                floatersListContainer.innerHTML = '';
-                Object.keys(floaterData).sort().forEach((name, index) => {
-                    const button = document.createElement('button');
-                    button.textContent = name;
-                    button.className = 'w-full text-left p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white focus:outline-none focus:ring-2 ring-offset-2 ring-offset-gray-900 focus:ring-gray-400 transition-colors duration-200 animate-slide-in-up';
-                    button.style.animationDelay = `${index * 30}ms`;
-                    button.onclick = () => showFloaterDetails(name);
-                    floatersListContainer.appendChild(button);
-                });
-                allSitesLayer.clearLayers();
-                officerLayer.clearLayers();
-                routeLayer.clearLayers();
-                highlightLayer.clearLayers();
-            });
-
-            document.getElementById('show-cold-starts-btn').addEventListener('click', () => {
-                switchView(coldStartsView);
-                document.getElementById('cold-starts-day-selector').classList.remove('hidden');
-                document.getElementById('cold-starts-list-container').classList.add('hidden');
-                allSitesLayer.clearLayers();
-                officerLayer.clearLayers();
-                routeLayer.clearLayers();
-                highlightLayer.clearLayers();
-            });
-            document.getElementById('show-weekdays-cold-starts').addEventListener('click', () => displayColdStarts(coldStartsWeekdays, 'Weekdays'));
-            document.getElementById('show-saturday-cold-starts').addEventListener('click', () => displayColdStarts(coldStartsSaturday, 'Saturday'));
-            document.getElementById('show-sunday-cold-starts').addEventListener('click', () => displayColdStarts(coldStartsSunday, 'Sunday'));
-
-            document.getElementById('show-site-search-btn').addEventListener('click', () => {
-                switchView(siteSearchView);
-                allSitesLayer.clearLayers();
-                officerLayer.clearLayers();
-                routeLayer.clearLayers();
-                highlightLayer.clearLayers();
-                map.setView([37.7749, -122.4194], 13);
-            });
-            
-             document.getElementById('show-all-officers-btn').addEventListener('click', () => {
-                displayAllOfficersAndSites();
-                switchView(allOfficersView);
-            });
-
-            document.getElementById('back-from-floaters-btn').addEventListener('click', () => {
-                switchView(initialView);
-                displayAllSites();
-            });
-
-            document.getElementById('back-to-floaters-list-btn').addEventListener('click', () => {
-                switchView(floatersView);
-                allSitesLayer.clearLayers();
-                officerLayer.clearLayers();
-                routeLayer.clearLayers();
-                highlightLayer.clearLayers();
-            });
-
-            document.getElementById('back-from-zones-btn').addEventListener('click', () => {
-                switchView(initialView);
-                displayAllSites();
-            });
-
-            document.getElementById('back-from-cold-starts-day-select-btn').addEventListener('click', () => {
-                switchView(initialView);
-                displayAllSites();
-            });
-
-            document.getElementById('back-to-cold-starts-day-select-btn').addEventListener('click', () => {
-                document.getElementById('cold-starts-list-container').classList.add('hidden');
-                document.getElementById('cold-starts-day-selector').classList.remove('hidden');
-                allSitesLayer.clearLayers();
-                highlightLayer.clearLayers();
-            });
-
-
-            document.getElementById('back-from-all-officers-btn').addEventListener('click', () => {
-                switchView(initialView);
-                displayAllSites();
-                document.getElementById('officer-search-input').value = '';
-                document.getElementById('officer-suggestions').innerHTML = '';
-                map.setView([37.7749, -122.4194], 13);
-            });
-
-            document.getElementById('back-to-initial-btn').addEventListener('click', () => {
-                switchView(initialView);
-                displayAllSites();
-                map.setView([37.7749, -122.4194], 13);
-            });
-
-             document.getElementById('back-to-initial-from-search-btn').addEventListener('click', () => {
-                switchView(initialView);
-                displayAllSites();
-                map.setView([37.7749, -122.4194], 13);
-            });
-
-            document.getElementById('back-to-relief-list-btn').addEventListener('click', () => {
-                switchView(reliefListView);
-                displayOnlyReliefSites();
-            });
-
-             document.getElementById('back-to-site-search-btn').addEventListener('click', () => {
-                switchView(initialView); // Go back to initial view, which shows all sites.
-                displayAllSites();
-            });
-
-            const officerSearchInput = document.getElementById('officer-search-input');
-            const officerSuggestionsContainer = document.getElementById('officer-suggestions');
-
-            officerSearchInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase().trim();
-                officerSuggestionsContainer.innerHTML = '';
-
-                if (!query) {
-                    plotOfficers(officers); // If query is empty, show all
-                    return;
-                }
-
-                const filteredOfficers = officers.filter(officer => {
-                    const fullName = `${officer.firstName} ${officer.lastName}`.toLowerCase();
-                    return fullName.includes(query);
-                });
-                
-                plotOfficers(filteredOfficers); // Live filter the map pins
-
-                filteredOfficers.forEach((officer, index) => {
-                    const suggestionDiv = document.createElement('div');
-                    suggestionDiv.className = 'p-1.5 text-xs bg-white text-gray-900 rounded-lg shadow-xl shadow-white/30 hover:bg-black hover:text-white cursor-pointer animate-slide-in-up transition-colors duration-200';
-                    suggestionDiv.style.animationDelay = `${index * 30}ms`;
-                    const fullName = `${officer.firstName} ${officer.lastName}`;
-                    suggestionDiv.textContent = fullName;
-                    suggestionDiv.onclick = () => {
-                        officerSearchInput.value = fullName;
-                        officerSuggestionsContainer.innerHTML = '';
-                        plotOfficers([officer]);
-                        if (officer.homeLat && officer.homeLng) {
-                            map.setView([officer.homeLat, officer.homeLng], 15);
-                        }
-                    };
-                    officerSuggestionsContainer.appendChild(suggestionDiv);
-                });
-            });
-            
-            // Initial State
-            displayAllSites();
-            mapInitialized = true;
-        }
-        
-        // --- Loader Animation and App Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             const loader = document.getElementById('loader');
             const appContainer = document.getElementById('app-container');
@@ -1940,11 +185,7 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
 
-            const katakana = 'アァカサ0123456789rochakkadelabcdefghijk';
-            const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            const nums = '0123456789';
-            const alphabet = katakana + latin + nums;
-
+            const alphabet = 'アァカサ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             const fontSize = 16;
             const columns = canvas.width / fontSize;
             const rainDrops = [];
@@ -1956,14 +197,12 @@
             const drawMatrix = () => {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-
                 ctx.fillStyle = '#0F0';
                 ctx.font = fontSize + 'px monospace';
 
                 for (let i = 0; i < rainDrops.length; i++) {
                     const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
                     ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
-
                     if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
                         rainDrops[i] = 0;
                     }
@@ -1971,24 +210,230 @@
                 }
             };
             
-            const matrixInterval = setInterval(drawMatrix, 30);
+            const matrixInterval = setInterval(drawMatrix, 33);
 
-            // --- App Start Sequence ---
             setTimeout(() => {
                 loader.classList.add('fade-out');
-                
                 loader.addEventListener('transitionend', () => {
                     loader.style.display = 'none';
                     appContainer.classList.remove('hidden');
-                    document.body.style.overflow = ''; // Restore scrolling
-                    document.body.style.backgroundColor = ''; // Restore original body bg
-                    initializeMapApplication();
+                    document.body.style.overflow = '';
+                    initializeChartApp();
                     clearInterval(matrixInterval);
                 }, { once: true });
-
-            }, 2500); // 2.5 second loader display
+            }, 2500);
         });
+
+        function initializeChartApp() {
+            const fileInput = document.getElementById('csv-file-input');
+            const shareButton = document.getElementById('share-button');
+            const shareFeedback = document.getElementById('share-feedback');
+            const uploadButton = document.getElementById('upload-button');
+            const passwordModal = document.getElementById('password-modal');
+            const passwordInput = document.getElementById('password-input');
+            const passwordSubmit = document.getElementById('password-submit');
+            const passwordError = document.getElementById('password-error');
+
+            const initialCsvData = `FirstName,LastName,Excused,Supervisor
+Aireyn,Taylor-Hunter,1,Jason Daugherty
+Itishia,Hunt,0,Jason Daugherty
+Aireyn,Taylor-Hunter,0,Jason Daugherty
+Aireyn,Taylor-Hunter,1,Jason Daugherty
+David,Peraza,1,Mohammed Ezzat
+Nessrine,Kasmi,1,Aldo Diaz
+Nessrine,Kasmi,1,Aldo Diaz
+Nessrine,Kasmi,1,Aldo Diaz
+Nessrine,Kasmi,1,Aldo Diaz
+Ruth,Dock,1,Jason Daugherty
+Rommel,Perez,1,Aldo Diaz
+Enkhzaya,Oldokh,0,Jason Daugherty
+Maryann,Fillari,1,Aldo Diaz
+Wossenu,Adesse,1,Jason Daugherty
+Serinia,Brown,1,Douglas Fletcher
+Delon,Johnson,1,Inderprit Gill
+Ashanti,Griffin,1,Inderprit Gill
+Dominic,Thorn,1,Inderprit Gill
+Michael,Gorman,0,Julio Daldon
+Maryann,Fillari,1,Aldo Diaz
+Jeffrey,Hughley,1,Aldo Diaz
+Marcus,Lewis,1,Mohammed Ezzat
+Issack,Jones,0,Aldo Diaz
+Adrian,Gutter,0,Aldo Diaz
+Latisha,White,1,Aldo Diaz
+Lorenzo,Hudson,0,Mohammed Ezzat
+Rommel,Calvert,1,Jason Daugherty
+Faisal,Alnumi,1,Jason Daugherty
+Bishnu,Wagle,1,Jason Daugherty
+Liliana,Prieto,1,Jason Daugherty
+Itishia,Hunt,0,Jason Daugherty
+Aireyn,Taylor-Hunter,0,Jason Daugherty
+Aireyn,Taylor-Hunter,1,Jason Daugherty
+David,Peraza,1,Mohammed Ezzat
+Nessrine,Kasmi,1,Aldo Diaz
+Nessrine,Kasmi,1,Aldo Diaz
+Nessrine,Kasmi,1,Aldo Diaz
+Nessrine,Kasmi,1,Aldo Diaz
+Ruth,Dock,1,Jason Daugherty
+Rommel,Perez,1,Aldo Diaz
+Enkhzaya,Oldokh,0,Jason Daugherty
+Maryann,Fillari,1,Aldo Diaz
+Wossenu,Adesse,1,Jason Daugherty
+Serinia,Brown,1,Douglas Fletcher
+Delon,Johnson,1,Inderprit Gill
+Ashanti,Griffin,1,Inderprit Gill
+Dominic,Thorn,1,Inderprit Gill
+Michael,Gorman,0,Julio Daldon
+Maryann,Fillari,1,Aldo Diaz
+Jeffrey,Hughley,1,Aldo Diaz
+Marcus,Lewis,1,Mohammed Ezzat
+Issack,Jones,0,Aldo Diaz
+Adrian,Gutter,0,Aldo Diaz
+Latisha,White,1,Aldo Diaz
+Lorenzo,Hudson,0,Mohammed Ezzat
+Rommel,Calvert,1,Jason Daugherty
+Faisal,Alnumi,1,Jason Daugherty
+Bishnu,Wagle,1,Jason Daugherty`;
+
+            shareButton.addEventListener('click', () => {
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    shareFeedback.style.opacity = '1';
+                    setTimeout(() => { shareFeedback.style.opacity = '0'; }, 2000);
+                }).catch(err => { console.error('Failed to copy: ', err); });
+            });
+            
+            // Password Modal Logic
+            uploadButton.addEventListener('click', () => {
+                passwordModal.classList.remove('hidden');
+                passwordInput.focus();
+            });
+
+            passwordModal.addEventListener('click', (e) => {
+                if (e.target === passwordModal) {
+                    passwordModal.classList.add('hidden');
+                    passwordError.textContent = '';
+                    passwordInput.value = '';
+                }
+            });
+
+            passwordSubmit.addEventListener('click', () => {
+                if (passwordInput.value === '91965') {
+                    passwordModal.classList.add('hidden');
+                    passwordError.textContent = '';
+                    passwordInput.value = '';
+                    fileInput.click();
+                } else {
+                    passwordError.textContent = 'ACCESS DENIED';
+                    passwordInput.value = '';
+                }
+            });
+
+            const renderChart = (data) => {
+                d3.select("#chart").selectAll("*").remove();
+                d3.select("#supervisor-legend").selectAll("*").remove();
+
+                const employeeData = d3.rollups(data, v => {
+                    const excused = d3.sum(v, d => d.Excused === '1' ? 1 : 0);
+                    return { excused: excused, unexcused: v.length - excused, total: v.length, supervisor: v[0].Supervisor };
+                }, d => `${d.FirstName} ${d.LastName}`).map(([name, values]) => ({ name, ...values }));
+
+                employeeData.sort((a, b) => b.total - a.total);
+
+                const supervisors = [...new Set(employeeData.map(d => d.supervisor))].sort();
+                const supervisorStats = d3.rollups(data, v => v.length, d => d.Supervisor).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+
+                const margin = { top: 20, right: 30, bottom: 40, left: 150 };
+                const chartElement = document.getElementById('chart');
+                const width = chartElement.clientWidth - margin.left - margin.right;
+                const height = Math.max(600, employeeData.length * 30);
+                
+                d3.select(chartElement).style('height', `${height + margin.top + margin.bottom}px`);
+
+                const svg = d3.select("#chart").append("svg")
+                    .attr("width", "100%").attr("height", "100%")
+                    .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+                    .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+                
+                const xScale = d3.scaleLinear().domain([0, d3.max(employeeData, d => d.total)]).range([0, width]);
+                const yScale = d3.scaleBand().domain(employeeData.map(d => d.name)).range([0, height]).padding(0.5);
+                const supervisorColor = d3.scaleOrdinal().domain(supervisors).range(["#10B981", "#F59E0B", "#3B82F6", "#EF4444", "#8B5CF6", "#EC4899", "#6366F1", "#14B8A6"]);
+                
+                svg.append("g").call(d3.axisLeft(yScale).tickSize(0)).select(".domain").remove();
+                svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(xScale).ticks(Math.min(10, d3.max(employeeData, d => d.total))));
+                svg.append("text").attr("class", "axis-label").attr("text-anchor", "middle").attr("x", width / 2).attr("y", height + margin.bottom - 5).text("Number of Call-Offs");
+
+                const tooltip = d3.select("#tooltip");
+
+                const groups = svg.selectAll(".bar-group").data(employeeData).enter().append("g")
+                    .attr("class", "bar-group").attr("transform", d => `translate(0, ${yScale(d.name)})`)
+                    .on("mouseover", function(event, d) {
+                        tooltip.transition().duration(200).style("opacity", 1);
+                        tooltip.html(`<div class="font-bold text-white text-base">${d.name}</div><div class="text-sm text-gray-400 mb-2">Supervisor: ${d.supervisor}</div><div class="w-full h-px bg-gray-600 my-1"></div><div class="flex justify-between text-sm"><span class="text-gray-300">Total:</span> <span class="font-bold text-white">${d.total}</span></div><div class="flex justify-between text-sm"><span class="text-white">Excused:</span> <span class="font-bold text-white">${d.excused}</span></div><div class="flex justify-between text-sm"><span class="text-gray-400">Unexcused:</span> <span class="font-bold text-gray-400">${d.unexcused}</span></div>`)
+                        .style("left", (event.pageX + 20) + "px").style("top", (event.pageY - 20) + "px");
+                    }).on("mouseout", () => tooltip.transition().duration(500).style("opacity", 0));
+                
+                groups.append("rect").attr("x", 0).attr("width", d => Math.max(0, xScale(d.total))).attr("height", yScale.bandwidth()).attr("fill", d => supervisorColor(d.supervisor)).attr("rx", 2);
+                
+                const innerBarHeight = yScale.bandwidth() * 0.3; // Made the inner bar smaller
+                const innerBarY = (yScale.bandwidth() - innerBarHeight) / 2;
+
+                groups.append("rect").attr("x", 0).attr("y", innerBarY).attr("width", d => Math.max(0, xScale(d.unexcused))).attr("height", innerBarHeight).attr("fill", "#4b5563"); 
+                groups.append("rect").attr("x", d => xScale(d.unexcused)).attr("y", innerBarY).attr("width", d => Math.max(0, xScale(d.excused))).attr("height", innerBarHeight).attr("fill", "#ffffff");
+                
+                supervisors.forEach(sup => {
+                    const stat = supervisorStats.find(s => s.name === sup);
+                    const count = stat ? stat.count : 0;
+                    const legendItem = d3.select("#supervisor-legend").append("div").attr("class", "flex items-center justify-between");
+                    const nameContainer = legendItem.append("div").attr("class", "flex items-center");
+                    nameContainer.append("div").style("width", "12px").style("height", "12px").style("background-color", supervisorColor(sup)).attr("class", "mr-3 rounded-sm flex-shrink-0");
+                    nameContainer.append("span").text(sup).attr("class", "text-xs text-gray-300 truncate pr-2");
+                    legendItem.append("span").text(count).attr("class", "text-xs font-bold text-lime-400");
+                });
+            };
+
+            const loadDataFromFile = (file) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const data = d3.csvParse(e.target.result);
+                        if (data.length > 0) renderChart(data);
+                        else alert('ERROR: Uploaded file is empty or invalid.');
+                    } catch (error) {
+                        alert('ERROR: Could not parse CSV file. Check format.');
+                        console.error("CSV Parse Error:", error);
+                    }
+                };
+                reader.onerror = () => alert('ERROR: Could not read file.');
+                reader.readAsText(file);
+            };
+
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) loadDataFromFile(file);
+            });
+
+            // Initial load
+            try {
+                const initialData = d3.csvParse(initialCsvData);
+                renderChart(initialData);
+            } catch (error) {
+                alert('FATAL ERROR: Could not parse embedded data.');
+                console.error("Initial Data Parse Error:", error);
+                d3.select("#chart").html(`<div class="text-red-400 p-4">Error: Could not parse the embedded data.</div>`);
+            }
+
+            // Responsive chart rendering
+            window.addEventListener('resize', () => {
+                try {
+                    if (fileInput.files[0]) {
+                        loadDataFromFile(fileInput.files[0]);
+                    } else {
+                        renderChart(d3.csvParse(initialCsvData));
+                    }
+                } catch(e) { console.error("Resize render error:", e)}
+            });
+        }
     </script>
+
 </body>
 </html>
 
